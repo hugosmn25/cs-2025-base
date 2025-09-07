@@ -1,0 +1,51 @@
+# Fichier .gitignore pour projet PHP (Composer)
+
+# Dépendances
+/vendor/
+/node_modules/
+
+# Environnement et secrets
+.env
+.env.*.local
+/.env.local
+/paramBDD.txt
+
+# Composer
+/composer.phar
+
+# Logs, cache, temporaires
+*.log
+/logs/
+/storage/
+/cache/
+/tmp/
+/temp/
+.phpunit.result.cache
+phpunit.xml.cache
+/coverage/
+
+# IDE / éditeurs
+.idea/
+.vscode/
+*.code-workspace
+*.sublime-project
+*.sublime-workspace
+
+# OS / fichiers parasites
+.DS_Store
+Thumbs.db
+Icon?
+
+# Backups / fichiers temporaires
+*~
+*.swp
+*.swo
+*.swx
+*.bak
+*.orig
+*.old
+*.tar
+*.zip
+*.gz
+*.7z
+

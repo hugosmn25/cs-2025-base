@@ -1,0 +1,22 @@
+@startuml
+
+usecase (gérer compte) as UC_Gerer_Compte
+usecase (gérer catalogue) as UC_Gerer_Catalogue
+usecase (gérer entreprise cliente) as UC_Gerer_Entreprise
+usecase (gérer commande) as UC_Gerer_Commande
+
+usecase (Modifier  mon mot de passe) as UC_MDP
+usecase (gérer produit) as UC_G_Produit
+usecase (gérer catégorie produit) as UC_G_Cat_Produit
+
+
+
+actor :administrateur du logiciel: as admin
+actor :utilisateur Cafe: as userCafe
+actor :entreprise cliente: as entreprise
+actor :salarié entreprise cliente: as salarie
+
+
+
+
+@enduml

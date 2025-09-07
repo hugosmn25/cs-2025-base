@@ -1,0 +1,25 @@
+@startuml
+' Définir la limite du système
+
+  ' Cas d'utilisation à l'intérieur de la limite
+  (Emprunter un livre) as Borrow
+  (Retourner un livre) as Return
+  (Consulter le catalogue) as Consult
+
+  ' Les relations "include" et "extend" peuvent également être ajoutées si nécessaire, par exemple:
+  Borrow --> (Vérifier disponibilité) : <<include>>
+  Return --> (Payer amende) : <<extend>> : si en retard
+
+
+' Définir les acteurs
+actor "Membre de la bibliothèque" as Member
+actor "Bibliothécaire" as Librarian
+
+' Relier les acteurs aux cas d'utilisation
+Member --> Borrow
+Member --> Return
+Member --> Consult
+Librarian --> Borrow
+Librarian --> Return
+
+@enduml
