@@ -29,7 +29,7 @@ services:
       - db
 
   mailhog: # !Important Nom du service 
-    image: mailhog/mailhog
+    image: mailhog/mailhog:latest
     container_name: mail_cafe2025
     logging:
       driver: 'none'  # Désactiver les logs car il y en a beaucoup
