@@ -10,11 +10,11 @@
     }
   ],
   "require": {
-    "spipu/html2pdf": "^5.2",
+    "spipu/html2pdf": "*",
     "ext-sodium": "*",
     "ext-curl": "*",
     "ext-pdo": "*",
-    "phpmailer/phpmailer": "^6.6",
+    "phpmailer/phpmailer": "*",
     "slim/slim": "*",
     "slim/psr7": "^1.7"
   },
