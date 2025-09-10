@@ -51,7 +51,7 @@ class Controleur_Gerer_Rgpd
                     switch ($utilisateur["idCategorie_utilisateur"]) {
                         case 1:
                         case 2:
-                            $this->vue->setMenu(new Vue_Menu_Administration());
+                            $this->vue->setMenu(new Vue_Menu_Administration($_SESSION["idCategorie_utilisateur"]));
                             $this->vue->addToCorps(new Vue_AfficherMessage("Bienvenue !!"));
                             break;
                         case 3:

@@ -34,7 +34,7 @@ class Controleur_Gerer_monCompte
         //Il a cliqué sur changer Mot de passe. Cas pas fini
          
         $this->vue->setEntete(new Vue_Structure_Entete());
-        $this->vue->setMenu(new Vue_Menu_Administration());
+        $this->vue->setMenu(new Vue_Menu_Administration($_SESSION["idCategorie_utilisateur"]));
         $this->vue->addToCorps(new Vue_Utilisateur_Changement_MDP("", "Gerer_monCompte"));
         $response->getBody()->write($this->vue->donneStr());
         return $response;
@@ -51,7 +51,7 @@ class Controleur_Gerer_monCompte
             //on vérifie si le mot de passe de la BDD est le même que celui rentré
             if ($_REQUEST["NouveauPassword"] == $_REQUEST["ConfirmPassword"]) {
                 $this->vue->setEntete(new Vue_Structure_Entete());
-                $this->vue->setMenu(new Vue_Menu_Administration());
+                $this->vue->setMenu(new Vue_Menu_Administration($_SESSION["idCategorie_utilisateur"]));
                  
                     Modele_Utilisateur::Utilisateur_Modifier_motDePasse($_SESSION["idUtilisateur"], $_REQUEST["NouveauPassword"]);
                     $this->vue->addToCorps(new Vue_Compte_Administration_Gerer("<label><b>Votre mot de passe a bien été modifié</b></label>"));
@@ -59,12 +59,12 @@ class Controleur_Gerer_monCompte
                 
             } else {
                 $this->vue->setEntete(new Vue_Structure_Entete());
-                $this->vue->setMenu(new Vue_Menu_Administration());
+                $this->vue->setMenu(new Vue_Menu_Administration($_SESSION["idCategorie_utilisateur"]));
                 $this->vue->addToCorps(new Vue_Utilisateur_Changement_MDP("<label><b>Les nouveaux mots de passe ne sont pas identiques</b></label>", "Gerer_monCompte"));
             }
         } else {
             $this->vue->setEntete(new Vue_Structure_Entete());
-            $this->vue->setMenu(new Vue_Menu_Administration());
+            $this->vue->setMenu(new Vue_Menu_Administration($_SESSION["idCategorie_utilisateur"]));
             $this->vue->addToCorps(new Vue_Utilisateur_Changement_MDP("<label><b>Vous n'avez pas saisi le bon mot de passe</b></label>", "Gerer_monCompte"));
         }
         $response->getBody()->write($this->vue->donneStr());
@@ -89,7 +89,7 @@ class Controleur_Gerer_monCompte
         //Cas par défaut: affichage du menu des actions.
          
         $this->vue->setEntete(new Vue_Structure_Entete());
-        $this->vue->setMenu(new Vue_Menu_Administration());
+        $this->vue->setMenu(new Vue_Menu_Administration($_SESSION["idCategorie_utilisateur"]));
         $this->vue->addToCorps(new Vue_Compte_Administration_Gerer());
         $this->vue->setBasDePage(new Vue_Structure_BasDePage());
         $response->getBody()->write($this->vue->donneStr());

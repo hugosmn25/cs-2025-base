@@ -27,7 +27,7 @@ class Controleur_Gerer_entreprisesPartenaires
     {
          
         $this->vue->setEntete(new Vue_Structure_Entete());
-        $this->vue->setMenu(new Vue_Menu_Administration());
+        $this->vue->setMenu(new Vue_Menu_Administration($_SESSION["idCategorie_utilisateur"]));
     }
 
     public function Modifer(Request $request, Response $response, array $args): Response

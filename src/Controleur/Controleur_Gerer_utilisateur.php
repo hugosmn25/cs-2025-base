@@ -28,7 +28,7 @@ class Controleur_Gerer_utilisateur
     public function init(): void
     {
          
-        $this->vue->setMenu(new Vue_Menu_Administration());
+        $this->vue->setMenu(new Vue_Menu_Administration($_SESSION["idCategorie_utilisateur"]));
     }
 
     public function ModifierUtilisateur(Request $request, Response $response, array $args): Response

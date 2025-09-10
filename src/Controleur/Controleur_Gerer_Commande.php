@@ -28,7 +28,7 @@ class Controleur_Gerer_Commande
     {
          
         $this->vue->setEntete(new Vue_Structure_Entete());
-        $this->vue->setMenu(new Vue_Menu_Administration());
+        $this->vue->setMenu(new Vue_Menu_Administration($_SESSION["idCategorie_utilisateur"]));
 
         $listeEtatCommande = Modele_Commande::EtatCommande_Liste();
         $this->vue->addToCorps(new Vue_Commande_Etat($listeEtatCommande));

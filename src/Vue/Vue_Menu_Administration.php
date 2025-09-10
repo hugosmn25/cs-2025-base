@@ -4,24 +4,43 @@ use App\Utilitaire\Vue_Composant;
 
 class Vue_Menu_Administration extends Vue_Composant
 {
-    public function __construct()
+    private int $idCategorie_Utilisateur;
+    public function __construct(int $idCategorie_Utilisateur)
     {
+        $this->idCategorie_Utilisateur = $idCategorie_Utilisateur;
     }
     function donneTexte(): string
     {
-        return "
+        switch( $this->idCategorie_Utilisateur ) {
+            case 1: // Administrateur
+                 return "
              <nav id='menu'>
               <ul id='menu-closed'> 
                 <li><a href='/Gerer_utilisateur?'>Utilisateurs</a></li>
-                     
-               
-                        <li><a href='/Gerer_catalogue?'>Catalogue</a></li>   
-            
-          <li><a href='/Gerer_Commande?'>Commandes</a></li>
-            
                 <li><a href='/Gerer_monCompte?'>Mon compte</a></li> 
                </ul>
             </nav> ";
+            case 2: // Gestionnaire
+                 return "
+             <nav id='menu'>
+              <ul id='menu-closed'> 
+                <li><a href='/Gerer_catalogue?'>Catalogue</a></li> 
+                <li><a href='/Gerer_monCompte?'>Mon compte</a></li> 
+              </ul>
+            </nav> ";
+            case 5: // commercial
+                 return "
+             <nav id='menu'>
+              <ul id='menu-closed'>                 
+                <li><a href='/Gerer_Commande?'>Commandes</a></li>
+                <li><a href='/Gerer_monCompte?'>Mon compte</a></li> 
+               </ul>
+            </nav> ";
+            default:
+                return ""; // Menu vide pour les autres catégories
+        }
+
+       
 
 
 

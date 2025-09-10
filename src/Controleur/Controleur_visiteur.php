@@ -79,7 +79,7 @@ class Controleur_visiteur
                     case 1:
                     case 2:
                         //$_SESSION["typeConnexionBack"] = "gestionnaireCatalogue";
-                        $this->vue->setMenu(new Vue_Menu_Administration());
+                        $this->vue->setMenu(new Vue_Menu_Administration($_SESSION["idCategorie_utilisateur"]));
                         $this->vue->addToCorps(new Vue_AfficherMessage("Bienvenue !!"));
                         break;
                     case 3:
@@ -137,7 +137,7 @@ class Controleur_visiteur
                                     case 1:
                                     case 2:
                                         //$_SESSION["typeConnexionBack"] = "gestionnaireCatalogue";
-                                        $this->vue->setMenu(new Vue_Menu_Administration());
+                                        $this->vue->setMenu(new Vue_Menu_Administration($_SESSION["idCategorie_utilisateur"]));
                                         $this->vue->addToCorps(new Vue_AfficherMessage("Bienvenue !!"));
                                         break;
                                     case 3:

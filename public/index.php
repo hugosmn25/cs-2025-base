@@ -42,7 +42,7 @@ $visiteurController = new \App\Controleur\Controleur_visiteur($Vue, $catalogueCl
 if (isset($_SESSION["idCategorie_utilisateur"])) {
     $typeConnexion = $_SESSION["idCategorie_utilisateur"];
 } else {
-    $typeConnexion = "0";
+    $typeConnexion = 0;
 }
 
 
@@ -68,7 +68,7 @@ switch ((int) $typeConnexion) {
 
     case 1:
     case 2:
-
+    case 5:
         $app->get('/', [$visiteurController, 'default']);
         $app->get('/Gerer_Rgpd', [$rgpdController, 'validerRGPD']);
         $app->post('/Gerer_Rgpd/valider', [$rgpdController, 'validerRGPD']);
