@@ -7,97 +7,66 @@ class Vue_ConsentementRGPD extends Vue_Composant
 {
     private string $msgErreur;
     private $utilisateur;
-    public function __construct($utilisateur, string $msgErreur ="")
+    private ?array $politiqueCourante;
+    private array $finalites;
+    private array $consentsMap; // [finalite_id => statut]
+
+    public function __construct($utilisateur, ?array $politiqueCourante, array $finalites, array $consentsMap, string $msgErreur = "")
     {
-        $this->utilisateur=$utilisateur;
-        $this->msgErreur=$msgErreur;
+        $this->utilisateur = $utilisateur;
+        $this->politiqueCourante = $politiqueCourante;
+        $this->finalites = $finalites;
+        $this->consentsMap = $consentsMap;
+        $this->msgErreur = $msgErreur;
     }
 
     function donneTexte(): string
     {
-        $erreur = $this->msgErreur !== "" ? "<div class='alerte-erreur' style='color:red; font-weight:bold; margin:10px 0;'>".htmlspecialchars($this->msgErreur)."</div>" : "";
-        $str= "<H1>Objet du traitement (finalité et base légale)</H1>
-La société ABCD, dont le siège est situé à CONFIANCE (96 000), Rue la Transparence, dispose d’un site internet de vente en ligne. Ce site permet de recevoir les commandes de nos clients et les données collectées à cette occasion sont enregistrées et traitées dans un fichier clients.
+        $erreur = $this->msgErreur !== "" ? "<div class='alerte-erreur' style='color:red; font-weight:bold; margin:10px 0;'>" . htmlspecialchars($this->msgErreur) . "</div>" : "";
 
-Ce fichier permet de :
+        $header = "<h1>Politique de confidentialité</h1>";
+        $contenu = "";
+        $versionInfo = "";
+        if ($this->politiqueCourante) {
+            $cv = htmlspecialchars($this->politiqueCourante['code_version'] ?? '');
+            $pl = htmlspecialchars($this->politiqueCourante['publie_le'] ?? '');
+            $contenuBrut = $this->politiqueCourante['contenu'] ?? '';
+            $versionInfo = "<div style='margin:8px 0; color:#555;'>Version: <b>$cv</b>, publiée le <b>$pl</b></div>";
+            $contenu = "<div class='rgpd-politique' style='white-space:pre-wrap; border:1px solid #ddd; padding:10px; margin:10px 0;'>" . nl2br(htmlspecialchars($contenuBrut)) . "</div>";
+        } else {
+            $contenu = "<div class='rgpd-politique' style='border:1px solid #ddd; padding:10px; margin:10px 0;'>La politique n'est pas encore publiée.</div>";
+        }
 
-Gérer les commandes, le paiement et la livraison.
-Mener des opérations de marketing (fidélisation, promotions) et adresser des publicités par courriel auprès de nos clients qui ne s’y sont pas opposés ou qui l’ont accepté :
-Sur des produits analogues à ceux qu’ils ont commandés.
-Sur d’autres produits proposés par la société. Par exemple, si un client achète une robe, une crème pour le corps pourra lui être proposée.
-Transmettre les données de nos clients qui l’ont accepté à nos partenaires commerciaux, pour leur permettre de leur adresser de la publicité (cf. ci-dessous).
-Bases légales des traitements
-Gestion des commandes : la base légale du traitement est l’exécution d’un contrat (Cf. article 6.1.b) du Règlement européen sur la protection des données).
-Envoi de sollicitations commerciales par courriel sur des produits analogues à ceux commandés par les clients : la base légale du traitement est l’intérêt légitime de la société (Cf. article 6.1.f) du Règlement européen sur la protection des données), à savoir promouvoir nos produits auprès de nos clients.
-Envoi de sollicitations commerciales par courriel sur d’autres produits proposés par la société ABCD : la base légale du traitement est le consentement (Cf. article 6.1.a) du Règlement européen sur la protection des données), comme l’exige l’article L. 34-5 du code des postes et des communications électroniques.
-Transmission de l’adresse électronique aux partenaires commerciaux : la base légale du traitement est le consentement (Cf. article 6.1.a) du Règlement européen sur la protection des données), comme l’exige l’article L. 34-5 du code des postes et des communications électroniques.
-Catégories de données
-Identité : civilité, nom, prénom, adresse, adresse de livraison, numéro de téléphone, adresse électronique, date de naissance, code interne de traitement permettant l'identification du client, données relatives à l’enregistrement sur des listes d’opposition.
-Données relatives aux commandes : numéro de la transaction, détail des achats, montant des achats, données relatives au règlement des factures (règlements, impayés, remises), retour de produits.
-Données relatives aux moyens de paiement : numéro de carte bancaire, date de fin de validité de la carte bancaire, cryptogramme visuel (lequel est immédiatement effacé).
-Données nécessaires à la réalisation des actions de fidélisation et de prospection : historique des achats.
-Destinataires des données
-Les services clients et facturation de la société ABCD sont destinataires de l’ensemble des catégories de données.
-Ses sous-traitants, chargés de la livraison de ses commandes, sont destinataires de l’identité, de l’adresse et du numéro de téléphone de nos clients.
-Les adresses électroniques des clients qui l’ont accepté sont mises à disposition de nos partenaires commerciaux (liste des partenaires commerciaux, régulièrement mise à jour) :
-société X
-société Y
-société Z
-Durée de conservation des données
-Données nécessaires à la gestion des commandes et à la facturation : pendant toute la durée de la relation commerciale et dix (10) ans au titre des obligations comptables.
-Données nécessaires à la réalisation des actions de fidélisation et à la prospection : pendant toute la durée de la relation commerciale et trois (3) ans à compter du dernier achat.
-Données relatives aux moyens de paiement : ces données ne sont pas conservées par la société ABCD ; elles sont collectées lors de la transaction et sont immédiatement supprimées dès le règlement de l’achat.
-Données concernant les listes d'opposition à recevoir de la prospection : trois (3) ans.
-Vos droits
-Si vous ne souhaitez plus recevoir de publicité de la part de la société ABCD (exercice du droit d’opposition ou retrait d’un consentement déjà donné), contactez-nous (prévoir ici un lien vers un formulaire d’exercice des droits informatique et libertés, faisant apparaître les différents hypothèses détaillées ci-dessus).
+        // Construction des lignes de finalités
+        $blocFinalites = "<fieldset style='border:1px solid #ccc; padding:10px;'><legend>Vos choix par finalité</legend>";
+        if (count($this->finalites) === 0) {
+            $blocFinalites .= "<div>Aucune finalité active.</div>";
+        } else {
+            foreach ($this->finalites as $f) {
+                $id = (int)$f['id'];
+                $nom = htmlspecialchars($f['nom']);
+                $statut = $this->consentsMap[$id] ?? '';
+                $checkedAcc = $statut === 'accorde' ? "checked" : "";
+                $checkedRef = $statut === 'refuse' ? "checked" : "";
+                $blocFinalites .= "<div style='margin:6px 0;'><label><b>$nom</b></label><br>"
+                    . "<label style='margin-right:12px;'><input type='radio' name='finalite[$id]' value='accorde' " . ($checkedAcc ?: 'required') . "> J'accepte</label>"
+                    . "<label><input type='radio' name='finalite[$id]' value='refuse' $checkedRef> Je refuse</label>"
+                    . "</div>";
+            }
+        }
+        $blocFinalites .= "</fieldset>";
 
-Si, après avoir consenti à ce que vos données soient transmises à nos partenaires commerciaux, vous souhaitez revenir sur ce choix et ne plus recevoir publicité de leur part, contactez-nous (prévoir ici un lien vers le formulaire d’exercice des droits informatique et libertés).
+        $form = "<form action='/Gerer_Rgpd/validerRGPD' method='post' style='margin-top:10px;'>"
+            . ($this->politiqueCourante ? "<input type='hidden' name='version_politique_id' value='" . (int)$this->politiqueCourante['id'] . "'>" : "")
+            . $blocFinalites
+            . "<fieldset style='border:1px solid #ccc; padding:10px; margin-top:10px;'><legend>Validation globale</legend>"
+            . "<p>Veuillez sélectionner une option pour continuer :</p>"
+            . "<div style='margin:6px 0;'><label><input type='radio' name='accepterRGPD' value='1' required> J'accepte le traitement tel que décrit</label></div>"
+            . "<div style='margin:6px 0;'><label><input type='radio' name='accepterRGPD' value='0'> Je refuse le traitement</label></div>"
+            . "<div style='margin-top:10px;'><button type='submit'>Continuer</button></div>"
+            . "</fieldset>"
+            . "</form>";
 
-(NB : un lien permettant aux clients et prospects de demander la suppression de leur adresse électronique de la liste de prospection doit systématiquement figurer sur les sollicitations envoyées par courriel)
-
-Vous pouvez accéder aux données vous concernant, les rectifier ou les faire effacer. Vous disposez également d'un droit à la portabilité et d’un droit à la limitation du traitement de vos données (Consultez le site cnil.fr pour plus d’informations sur vos droits).
-
-Pour exercer ces droits ou pour toute question sur le traitement de vos données dans ce dispositif, vous pouvez contacter notre DPO.
-
-Contacter notre DPO par voie électronique : dpo@abcd.fr
-Contacter notre DPO par courrier postal :
-Le délégué à la protection des données
-
-Société ABCD
-
-Rue la Transparence
-
-96 000 CONFIANCE
-
-(NB : si vous n’avez pas de DPO, indiquez des coordonnées précises où exercer ces droits dans l’entreprise).
-
-Si vous estimez, après avoir contacté la société ABCD, que vos droits « Informatique et Libertés » ne sont pas respectés, vous pouvez adresser une réclamation en ligne à la CNIL.
-<br>
-    $erreur
-    <form action='/Gerer_Rgpd/validerRGPD' method='post' style='margin-top:10px;'> 
-        <fieldset style='border:1px solid #ccc; padding:10px;'>
-            <legend>Consentement RGPD</legend>
-            <p>Veuillez sélectionner une option pour continuer :</p>
-            <div style='margin:6px 0;'>
-                <label>
-                    <input type='radio' name='accepterRGPD' value='1' required>
-                    J'accepte le traitement de mes données tel que décrit ci-dessus
-                </label>
-            </div>
-            <div style='margin:6px 0;'>
-                <label>
-                    <input type='radio' name='accepterRGPD' value='0' required>
-                    Je refuse le traitement de mes données
-                </label>
-            </div>
-            <div style='margin-top:10px;'>
-                <button type='submit'>Continuer</button>
-            </div>
-        </fieldset>
-    </form>
-
-";
-        
-        return $str;
+        return $header . $versionInfo . $contenu . $erreur . $form;
     }
 }

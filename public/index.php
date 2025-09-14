@@ -36,7 +36,7 @@ $entreprisesPartenairesController = new \App\Controleur\Controleur_Gerer_entrepr
 $tokenController = new \App\Controleur\Controleur_Gerer_Token($Vue);
 $rgpdController = new \App\Controleur\Controleur_Gerer_Rgpd($Vue, $catalogueClientController, $entrepriseController);
 $visiteurController = new \App\Controleur\Controleur_visiteur($Vue, $catalogueClientController, $entrepriseController);
-
+$admin_RgpdController = new \App\Controleur\Controleur_Admin_Rgpd($Vue);
 
 //Pour éviter d'être bloqué à cause des sesssions, si l'utilisateur retourne à l'URL de connexion, il est déconnecté
 if (isset($_SESSION["idCategorie_utilisateur"])) {
@@ -73,6 +73,15 @@ switch ((int) $typeConnexion) {
         $app->get('/Gerer_Rgpd', [$rgpdController, 'validerRGPD']);
         $app->post('/Gerer_Rgpd/valider', [$rgpdController, 'validerRGPD']);
         $app->post('/Gerer_Rgpd/validerRGPD', [$rgpdController, 'validerRGPD']);
+        $app->post('/Admin_Rgpd/finalites/ajouter', [$admin_RgpdController, 'finalitesAjouter']);
+        $app->post('/Admin_Rgpd/finalites/renommer/{id}', [$admin_RgpdController, 'finalitesRenommer']);
+        $app->get('/Admin_Rgpd/finalites/activer/{id}', [$admin_RgpdController, 'finalitesActiver']);
+        $app->get('/Admin_Rgpd/finalites/desactiver/{id}', [$admin_RgpdController, 'finalitesDesactiver']);
+        $app->get('/Admin_Rgpd', [$admin_RgpdController, 'default']);
+        $app->get('/Admin_Rgpd/finalites', [$admin_RgpdController, 'finalites']);
+        $app->get('/Admin_Rgpd/politique', [$admin_RgpdController, 'politique']);
+        $app->post('/Admin_Rgpd/politique/ajouter', [$admin_RgpdController, 'politiqueAjouter']);
+        $app->get('/Admin_Rgpd/historique', [$admin_RgpdController, 'historique']);
 
         $app->get('/Gerer_Commande', [$commandeBackController, 'Toute']);
         $app->get('/Gerer_Commande/Toute', [$commandeBackController, 'Toute']);

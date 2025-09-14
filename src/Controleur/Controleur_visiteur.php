@@ -15,6 +15,9 @@ use App\Vue\Vue_Structure_BasDePage;
 use App\Vue\Vue_Structure_Entete;
 use App\Vue\Vue_Utilisateur_Changement_MDPForce;
 use App\Utilitaire\Vue;
+use App\Modele\Modele_FinalitesConsentement;
+use App\Modele\Modele_VersionsPolitique;
+use App\Modele\Modele_Consentements;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
 use function App\Fonctions\CalculComplexiteMdp;
@@ -98,7 +101,14 @@ class Controleur_visiteur
 
                 }
             } else {
-                $this->vue->addToCorps(new Vue_ConsentementRGPD($utilisateur));
+                $politique = Modele_VersionsPolitique::VersionsPolitique_Select_Courante();
+                $finalites = Modele_FinalitesConsentement::FinalitesConsentement_Select_Actives();
+                $consentsMap = [];
+                foreach ($finalites as $f) {
+                    $last = Modele_Consentements::Consentements_Select_Dernier_ByUtilisateur_Finalite($utilisateur["idUtilisateur"], (int)$f['id']);
+                    if ($last) { $consentsMap[(int)$f['id']] = $last['statut']; }
+                }
+                $this->vue->addToCorps(new Vue_ConsentementRGPD($utilisateur, $politique, $finalites, $consentsMap));
             }
 
         } else {
@@ -156,7 +166,14 @@ class Controleur_visiteur
 
                                 }
                             } else {
-                                $this->vue->addToCorps(new Vue_ConsentementRGPD($utilisateur));
+                                $politique = Modele_VersionsPolitique::VersionsPolitique_Select_Courante();
+                                $finalites = Modele_FinalitesConsentement::FinalitesConsentement_Select_Actives();
+                                $consentsMap = [];
+                                foreach ($finalites as $f) {
+                                    $last = Modele_Consentements::Consentements_Select_Dernier_ByUtilisateur_Finalite($utilisateur["idUtilisateur"], (int)$f['id']);
+                                    if ($last) { $consentsMap[(int)$f['id']] = $last['statut']; }
+                                }
+                                $this->vue->addToCorps(new Vue_ConsentementRGPD($utilisateur, $politique, $finalites, $consentsMap));
                             }
                         }
                     } else {

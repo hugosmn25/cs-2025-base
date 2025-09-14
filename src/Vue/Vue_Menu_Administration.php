@@ -17,6 +17,7 @@ class Vue_Menu_Administration extends Vue_Composant
              <nav id='menu'>
               <ul id='menu-closed'> 
                 <li><a href='/Gerer_utilisateur?'>Utilisateurs</a></li>
+                <li><a href='/Admin_Rgpd'>RGPD</a></li>
                 <li><a href='/Gerer_monCompte?'>Mon compte</a></li> 
                </ul>
             </nav> ";

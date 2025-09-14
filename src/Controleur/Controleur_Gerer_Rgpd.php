@@ -9,6 +9,9 @@ use App\Vue\Vue_AfficherMessage;
 use App\Vue\Vue_Connexion_Formulaire_client;
 use App\Vue\Vue_ConsentementRGPD;
 use App\Vue\Vue_Menu_Administration;
+use App\Modele\Modele_FinalitesConsentement;
+use App\Modele\Modele_VersionsPolitique;
+use App\Modele\Modele_Consentements;
 use App\Vue\Vue_Structure_Entete;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -46,6 +49,42 @@ class Controleur_Gerer_Rgpd
 
                 $utilisateur = Modele_Utilisateur::Utilisateur_Select_ParId($_SESSION["idUtilisateur"]);
                 if ($utilisateur != null) {
+                    // Enregistrer les consentements par finalité si fournis
+                    $finalitesPost = $_REQUEST['finalite'] ?? [];
+                    $versionId = isset($_REQUEST['version_politique_id']) ? (int)$_REQUEST['version_politique_id'] : 0;
+                    if ($versionId === 0) {
+                        $versionId = (int)(Modele_VersionsPolitique::VersionsPolitique_Select_Courante()['id'] ?? 0);
+                    }
+                    $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+                    if (is_array($finalitesPost) && $versionId > 0) {
+                        foreach ($finalitesPost as $finaliteId => $statut) {
+                            $finaliteId = (int)$finaliteId;
+                            if (!in_array($statut, ['accorde','refuse','retire'], true)) continue;
+                            $last = Modele_Consentements::Consentements_Select_Dernier_ByUtilisateur_Finalite($utilisateur["idUtilisateur"], $finaliteId);
+                            $needInsert = false;
+                            $eventType = 'mise_a_jour';
+                            if (!$last) {
+                                $needInsert = true;
+                                $eventType = ($statut === 'accorde') ? 'accord' : (($statut === 'refuse') ? 'refus' : 'mise_a_jour');
+                            } else {
+                                if ($last['statut'] !== $statut || (int)$last['version_politique_id'] !== $versionId) {
+                                    $needInsert = true;
+                                    if ($last['statut'] === 'accorde' && $statut === 'refuse') $eventType = 'retrait';
+                                    elseif ($statut === 'accorde') $eventType = 'accord';
+                                    elseif ($statut === 'refuse') $eventType = 'refus';
+                                    else $eventType = 'mise_a_jour';
+                                }
+                            }
+                            if ($needInsert) {
+                                $idConsent = Modele_Consentements::Consentements_Ajouter((int)$utilisateur['idUtilisateur'], $finaliteId, $statut, $versionId, $ip);
+                                if ($idConsent !== false) {
+                                    $snapshot = $versionId.'|'.$finaliteId.'|'.$statut.'|'.$utilisateur['idUtilisateur'];
+                                    $hash = hash('sha256', $snapshot);
+                                    \App\Modele\Modele_EvenementsConsentement::EvenementsConsentement_Ajouter((int)$idConsent, $eventType, $versionId, $hash, $ip, (int)$utilisateur['idUtilisateur']);
+                                }
+                            }
+                        }
+                    }
                     Modele_Utilisateur::Utilisateur_UpdateRgpd($utilisateur["idUtilisateur"], $_REQUEST["accepterRGPD"], $_SERVER['REMOTE_ADDR']);
                     $_SESSION["idCategorie_utilisateur"] = $utilisateur["idCategorie_utilisateur"];
                     switch ($utilisateur["idCategorie_utilisateur"]) {
@@ -76,8 +115,16 @@ class Controleur_Gerer_Rgpd
             }
         } else {
             $utilisateur = Modele_Utilisateur::Utilisateur_Select_ParId($_SESSION["idUtilisateur"]);
-
-            $this->vue->addToCorps(new Vue_ConsentementRGPD($utilisateur));
+            $politique = Modele_VersionsPolitique::VersionsPolitique_Select_Courante();
+            $finalites = Modele_FinalitesConsentement::FinalitesConsentement_Select_Actives();
+            $consentsMap = [];
+            if ($utilisateur && isset($utilisateur["idUtilisateur"])) {
+                foreach ($finalites as $f) {
+                    $last = Modele_Consentements::Consentements_Select_Dernier_ByUtilisateur_Finalite($utilisateur["idUtilisateur"], (int)$f['id']);
+                    if ($last) { $consentsMap[(int)$f['id']] = $last['statut']; }
+                }
+            }
+            $this->vue->addToCorps(new Vue_ConsentementRGPD($utilisateur, $politique, $finalites, $consentsMap));
         }
         $response->getBody()->write($this->vue->donneStr());
         return $response;
