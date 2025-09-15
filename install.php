@@ -84,8 +84,68 @@ println("Dernier script: $latest");
 
 if(confirm("Exécuter ce script ?")){
     $sql=file_get_contents($latest);
-    foreach(array_filter(array_map('trim',explode(';',$sql))) as $stmt){
-        if($stmt!=='') $pdo->exec($stmt);
+
+    // Split SQL safely: ignore semicolons inside strings and comments
+    $stmts = (function(string $sql){
+        $out = [];
+        $buf = '';
+        $len = strlen($sql);
+        $inSingle = $inDouble = $inBacktick = false;
+        $inLineComment = $inBlockComment = false;
+        for ($i=0; $i<$len; $i++) {
+            $ch = $sql[$i];
+            $next = $i+1 < $len ? $sql[$i+1] : "\0";
+
+            // Handle exiting line comment
+            if ($inLineComment) {
+                if ($ch === "\n") { $inLineComment = false; $buf .= $ch; }
+                continue;
+            }
+            // Handle exiting block comment
+            if ($inBlockComment) {
+                if ($ch === '*' && $next === '/') { $inBlockComment = false; $i++; }
+                continue;
+            }
+
+            // Enter comments when not in quotes
+            if (!$inSingle && !$inDouble && !$inBacktick) {
+                if ($ch === '-' && $next === '-' && ($i+2 >= $len || ctype_space($sql[$i+2]))) { $inLineComment = true; $i++; continue; }
+                if ($ch === '#') { $inLineComment = true; continue; }
+                if ($ch === '/' && $next === '*') { $inBlockComment = true; $i++; continue; }
+            }
+
+            // Toggle quote states, considering escapes
+            if (!$inDouble && !$inBacktick && $ch === "'" ) {
+                if (!$inSingle) { $inSingle = true; }
+                else {
+                    // Close only if not escaped (\' or '')
+                    $prev = $i>0 ? $sql[$i-1] : "\0";
+                    $prev2 = $i>1 ? $sql[$i-2] : "\0";
+                    if ($prev !== '\\' && !($prev === "'" && $prev2 === "'")) { $inSingle = false; }
+                }
+                $buf .= $ch; continue;
+            }
+            if (!$inSingle && !$inBacktick && $ch === '"') { $inDouble = !$inDouble; $buf .= $ch; continue; }
+            if (!$inSingle && !$inDouble && $ch === '`') { $inBacktick = !$inBacktick; $buf .= $ch; continue; }
+
+            // Statement boundary
+            if (!$inSingle && !$inDouble && !$inBacktick && $ch === ';') {
+                $trimmed = trim($buf);
+                if ($trimmed !== '') $out[] = $trimmed;
+                $buf = '';
+                continue;
+            }
+
+            // Regular char
+            $buf .= $ch;
+        }
+        $trimmed = trim($buf);
+        if ($trimmed !== '') $out[] = $trimmed;
+        return $out;
+    })($sql);
+
+    foreach($stmts as $stmt){
+        $pdo->exec($stmt);
     }
     ok("Script exécuté.");
 } else println("Exécution ignorée.");
