@@ -34,10 +34,11 @@ class Vue_Admin_Rgpd_Politique extends Vue_Composant
 
         return "
         <section style='padding: 10px;'>
+            <div style='max-width: 900px; margin: 0 auto;'>
             <h2>Politique de confidentialité</h2>
             $infoCourante
             <h3>Ajouter une nouvelle version</h3>
-            <form action='/Admin_Rgpd/politique/ajouter' method='post' style='display:block; max-width: 900px;'>
+            <form action='/Admin_Rgpd/politique/ajouter' method='post' style='display:block; max-width: 900px; margin: 0 auto;'>
                 <div style='margin:6px 0;'>
                     <label>Code version (ex: 2025-09-01):<br>
                         <input type='text' name='code_version' required value='".$this->suggestCode."'>
@@ -52,6 +53,7 @@ class Vue_Admin_Rgpd_Politique extends Vue_Composant
                     <button type='submit'>Publier comme version courante</button>
                 </div>
             </form>
+            </div>
         </section>
         ";
     }

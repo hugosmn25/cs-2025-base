@@ -108,4 +108,17 @@ class Modele_FinalitesConsentement
         $row = $requetePreparee->fetch(PDO::FETCH_ASSOC);
         return $row !== false ? $row : false;
     }
+
+    /**
+     * Retourne une finalité par son nom exact
+     */
+    static function FinalitesConsentement_Select_ByNom(string $nom)
+    {
+        $connexionPDO = Singleton_ConnexionPDO::getInstance();
+        $requetePreparee = $connexionPDO->prepare('SELECT * FROM `finalites_consentement` WHERE nom = :nom LIMIT 1');
+        $requetePreparee->bindParam('nom', $nom);
+        $requetePreparee->execute();
+        $row = $requetePreparee->fetch(PDO::FETCH_ASSOC);
+        return $row !== false ? $row : false;
+    }
 }

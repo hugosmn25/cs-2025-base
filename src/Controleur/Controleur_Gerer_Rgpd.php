@@ -40,6 +40,27 @@ class Controleur_Gerer_Rgpd
         $this->init();
         if (isset($_REQUEST["accepterRGPD"])) {
             if ($_REQUEST["accepterRGPD"] == 0) {
+                // Enregistrer le refus global RGPD avant de déconnecter
+                if (isset($_SESSION["idUtilisateur"])) {
+                    $idUserRefus = (int)$_SESSION["idUtilisateur"];
+                    Modele_Utilisateur::Utilisateur_UpdateRgpd($idUserRefus, 0, $_SERVER['REMOTE_ADDR'] ?? '');
+                    $versionId = (int)(Modele_VersionsPolitique::VersionsPolitique_Select_Courante()['id'] ?? 0);
+                    $rgpdGlobalNom = 'RGPD global';
+                    $f = Modele_FinalitesConsentement::FinalitesConsentement_Select_ByNom($rgpdGlobalNom);
+                    if ($f === false) {
+                        Modele_FinalitesConsentement::FinalitesConsentement_Ajouter($rgpdGlobalNom, 0);
+                        $f = Modele_FinalitesConsentement::FinalitesConsentement_Select_ByNom($rgpdGlobalNom);
+                    }
+                    if ($f !== false && $versionId > 0) {
+                        $finaliteIdGlobal = (int)$f['id'];
+                        $idConsentGlobal = Modele_Consentements::Consentements_Ajouter($idUserRefus, $finaliteIdGlobal, 'refuse', $versionId, $_SERVER['REMOTE_ADDR'] ?? null);
+                        if ($idConsentGlobal !== false) {
+                            $snapshot = $versionId.'|'.$finaliteIdGlobal.'|refuse|'.$idUserRefus;
+                            $hash = hash('sha256', $snapshot);
+                            \App\Modele\Modele_EvenementsConsentement::EvenementsConsentement_Ajouter((int)$idConsentGlobal, 'refus', $versionId, $hash, $_SERVER['REMOTE_ADDR'] ?? null, $idUserRefus);
+                        }
+                    }
+                }
                 session_destroy();
                 unset($_SESSION);
                 $this->vue->setEntete(new Vue_Structure_Entete());
@@ -86,6 +107,32 @@ class Controleur_Gerer_Rgpd
                         }
                     }
                     Modele_Utilisateur::Utilisateur_UpdateRgpd($utilisateur["idUtilisateur"], $_REQUEST["accepterRGPD"], $_SERVER['REMOTE_ADDR']);
+
+                    // Enregistrer aussi l'action globale RGPD dans les tables de consentement/événements
+                    $rgpdGlobalNom = 'RGPD global';
+                    $f = Modele_FinalitesConsentement::FinalitesConsentement_Select_ByNom($rgpdGlobalNom);
+                    if ($f === false) {
+                        // Crée en inactif pour ne pas l'afficher dans l'UI
+                        Modele_FinalitesConsentement::FinalitesConsentement_Ajouter($rgpdGlobalNom, 0);
+                        $f = Modele_FinalitesConsentement::FinalitesConsentement_Select_ByNom($rgpdGlobalNom);
+                    }
+                    if ($f !== false) {
+                        $finaliteIdGlobal = (int)$f['id'];
+                        $statutGlobal = ((int)$_REQUEST['accepterRGPD'] === 1) ? 'accorde' : 'refuse';
+                        // S'assure d'avoir une version de politique courante
+                        if (!isset($versionId) || $versionId <= 0) {
+                            $versionId = (int)(Modele_VersionsPolitique::VersionsPolitique_Select_Courante()['id'] ?? 0);
+                        }
+                        if ($versionId > 0) {
+                            $idConsentGlobal = Modele_Consentements::Consentements_Ajouter((int)$utilisateur['idUtilisateur'], $finaliteIdGlobal, $statutGlobal, $versionId, $_SERVER['REMOTE_ADDR'] ?? null);
+                            if ($idConsentGlobal !== false) {
+                                $eventType = ($statutGlobal === 'accorde') ? 'accord' : 'refus';
+                                $snapshot = $versionId.'|'.$finaliteIdGlobal.'|'.$statutGlobal.'|'.$utilisateur['idUtilisateur'];
+                                $hash = hash('sha256', $snapshot);
+                                \App\Modele\Modele_EvenementsConsentement::EvenementsConsentement_Ajouter((int)$idConsentGlobal, $eventType, $versionId, $hash, $_SERVER['REMOTE_ADDR'] ?? null, (int)$utilisateur['idUtilisateur']);
+                            }
+                        }
+                    }
                     $_SESSION["idCategorie_utilisateur"] = $utilisateur["idCategorie_utilisateur"];
                     switch ($utilisateur["idCategorie_utilisateur"]) {
                         case 1:
@@ -109,7 +156,7 @@ class Controleur_Gerer_Rgpd
                      
                     }
                 } else {
-                    $this->vue->addToCorps(new \App\Vue\Vue_AfficherMessage("Erreur utilisateur non trouvé"));
+                    $this->vue->addToCorps(new Vue_AfficherMessage("Erreur utilisateur non trouvé"));
 
                 }
             }

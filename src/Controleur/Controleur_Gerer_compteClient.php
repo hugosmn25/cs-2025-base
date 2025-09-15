@@ -34,7 +34,7 @@ class Controleur_Gerer_compteClient
         $this->init();
         $this->vue->setEntete(new Vue_Structure_Entete());
         $quantiteMenu = Modele_Commande::Panier_Quantite($_SESSION["idEntreprise"]);
-        $this->vue->setMenu(new Vue_Menu_Entreprise_Client($quantiteMenu));
+        $this->vue->setMenu(new Vue_Menu_Entreprise_Client());
         $this->vue->addToCorps(new Vue_Utilisateur_Changement_MDP());
         $response->getBody()->write($this->vue->donneStr());
         return $response;
@@ -83,7 +83,7 @@ class Controleur_Gerer_compteClient
         $this->init();
         $this->vue->setEntete(new Vue_Structure_Entete());
         $quantiteMenu = Modele_Commande::Panier_Quantite($_SESSION["idEntreprise"]);
-        $this->vue->setMenu(new Vue_Menu_Entreprise_Client($quantiteMenu));
+        $this->vue->setMenu(new Vue_Menu_Entreprise_Client());
         $response->getBody()->write($this->vue->donneStr());
         return $response;
     }
@@ -93,7 +93,7 @@ class Controleur_Gerer_compteClient
         $this->init();
         $this->vue->setEntete(new Vue_Structure_Entete());
         $quantiteMenu = Modele_Commande::Panier_Quantite($_SESSION["idEntreprise"]);
-        $this->vue->setMenu(new Vue_Menu_Entreprise_Client($quantiteMenu));
+        $this->vue->setMenu(new Vue_Menu_Entreprise_Client());
         $response->getBody()->write($this->vue->donneStr());
         return $response;
     }
@@ -104,7 +104,7 @@ class Controleur_Gerer_compteClient
         //Cas par défaut: affichage du menu des actions.
         $this->vue->setEntete(new Vue_Structure_Entete());
         $quantiteMenu = Modele_Commande::Panier_Quantite($_SESSION["idEntreprise"]);
-        $this->vue->setMenu(new Vue_Menu_Entreprise_Client($quantiteMenu));
+        $this->vue->setMenu(new Vue_Menu_Entreprise_Client());
         $this->vue->addToCorps(new Vue_Entreprise_Gerer_Compte());
         $response->getBody()->write($this->vue->donneStr());
         return $response;

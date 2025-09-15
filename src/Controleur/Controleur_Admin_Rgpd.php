@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 namespace App\Controleur;
 
 use App\Utilitaire\Vue;
@@ -64,7 +65,8 @@ class Controleur_Admin_Rgpd
     public function historique(Request $request, Response $response, array $args): Response
     {
         $this->init();
-        $this->vue->addToCorps(new Vue_AfficherMessage("<h2>Historique des événements</h2><p>À implémenter: liste des événements de consentement.</p>"));
+        $evenements = \App\Modele\Modele_EvenementsConsentement::EvenementsConsentement_Select_All();
+        $this->vue->addToCorps(new \App\Vue\Vue_Admin_Rgpd_Historique($evenements));
         $response->getBody()->write($this->vue->donneStr());
         return $response;
     }
@@ -74,10 +76,10 @@ class Controleur_Admin_Rgpd
         $this->init();
         $nom = trim($_REQUEST['nom'] ?? '');
         if ($nom === '') {
-            $this->vue->addToCorps(new Vue_AfficherMessage("<div style='color:red'>Le nom de la finalité est requis.</div>"));
+            $this->vue->addToCorps(new Vue_AfficherMessage("<div style='color:red'>Le nom de la finalitǸ est requis.</div>"));
         } else {
             Modele_FinalitesConsentement::FinalitesConsentement_Ajouter($nom, 1);
-            $this->vue->addToCorps(new Vue_AfficherMessage("Finalité ajoutée."));
+            $this->vue->addToCorps(new Vue_AfficherMessage("FinalitǸ ajoutǸe."));
         }
         $liste = Modele_FinalitesConsentement::FinalitesConsentement_Select_All();
         $this->vue->addToCorps(new Vue_Admin_Rgpd_Finalites($liste));
@@ -91,10 +93,10 @@ class Controleur_Admin_Rgpd
         $id = (int)($args['id'] ?? ($_REQUEST['id'] ?? 0));
         $nom = trim($_REQUEST['nom'] ?? '');
         if ($id <= 0 || $nom === '') {
-            $this->vue->addToCorps(new Vue_AfficherMessage("<div style='color:red'>Paramètres invalides.</div>"));
+            $this->vue->addToCorps(new Vue_AfficherMessage("<div style='color:red'>Param��tres invalides.</div>"));
         } else {
             Modele_FinalitesConsentement::FinalitesConsentement_MAJ($id, $nom);
-            $this->vue->addToCorps(new Vue_AfficherMessage("Finalité renommée."));
+            $this->vue->addToCorps(new Vue_AfficherMessage("FinalitǸ renommǸe."));
         }
         $liste = Modele_FinalitesConsentement::FinalitesConsentement_Select_All();
         $this->vue->addToCorps(new Vue_Admin_Rgpd_Finalites($liste));
@@ -141,7 +143,7 @@ class Controleur_Admin_Rgpd
             $id = \App\Modele\Modele_VersionsPolitique::VersionsPolitique_Ajouter($code, $contenu, $hash, $publieLe, 0);
             if ($id !== false) {
                 \App\Modele\Modele_VersionsPolitique::VersionsPolitique_DefinirCourante((int)$id);
-                $this->vue->addToCorps(new Vue_AfficherMessage("Version ajoutée et définie courante."));
+                $this->vue->addToCorps(new Vue_AfficherMessage("Version ajoutǸe et dǸfinie courante."));
             } else {
                 $this->vue->addToCorps(new Vue_AfficherMessage("<div style='color:red'>Erreur lors de l'ajout.</div>"));
             }
@@ -159,3 +161,4 @@ class Controleur_Admin_Rgpd
         return $response;
     }
 }
+

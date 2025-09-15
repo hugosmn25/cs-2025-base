@@ -67,6 +67,7 @@ class Vue_ConsentementRGPD extends Vue_Composant
             . "</fieldset>"
             . "</form>";
 
-        return $header . $versionInfo . $contenu . $erreur . $form;
+        return "<section style='padding:10px;'><div style='max-width: 900px; margin: 0 auto;'>"
+            . $header . $versionInfo . $contenu . $erreur . $form . "</div></section>";
     }
 }
