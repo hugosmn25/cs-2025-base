@@ -33,7 +33,7 @@ class Modele_Utilisateur
         $requetePreparee = $connexionPDO->prepare('
         select utilisateur.*, categorie_utilisateur.libelle
         from `utilisateur`  inner join categorie_utilisateur on utilisateur.idCategorie_utilisateur = categorie_utilisateur.id
-        where utilisateur.idCategorie_utilisateur = 2 or utilisateur.idCategorie_utilisateur = 1 or utilisateur.idCategorie_utilisateur = 5
+        where utilisateur.idCategorie_utilisateur = 2 or utilisateur.idCategorie_utilisateur = 1 or utilisateur.idCategorie_utilisateur = 5 or utilisateur.idCategorie_utilisateur = 6
         order by login');
         $reponse = $requetePreparee->execute(); //$reponse boolean sur l'état de la requête
         $tableauReponse = $requetePreparee->fetchAll(PDO::FETCH_ASSOC);

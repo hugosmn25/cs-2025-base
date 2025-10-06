@@ -17,11 +17,10 @@ class Vue_Menu_Administration extends Vue_Composant
              <nav id='menu'>
               <ul id='menu-closed'> 
                 <li><a href='/Gerer_utilisateur?'>Utilisateurs</a></li>
-                <li><a href='/Admin_Rgpd'>RGPD</a></li>
                 <li><a href='/Gerer_monCompte?'>Mon compte</a></li> 
                </ul>
             </nav> ";
-            case 2: // Gestionnaire
+            case 2: // Gestionnaire catalogue
                  return "
              <nav id='menu'>
               <ul id='menu-closed'> 
@@ -29,7 +28,7 @@ class Vue_Menu_Administration extends Vue_Composant
                 <li><a href='/Gerer_monCompte?'>Mon compte</a></li> 
               </ul>
             </nav> ";
-            case 5: // commercial
+            case 5: // Commercial
                  return "
              <nav id='menu'>
               <ul id='menu-closed'>                 
@@ -37,16 +36,16 @@ class Vue_Menu_Administration extends Vue_Composant
                 <li><a href='/Gerer_monCompte?'>Mon compte</a></li> 
                </ul>
             </nav> ";
+            case 6: // Gestionnaire RGPD
+                 return "
+             <nav id='menu'>
+              <ul id='menu-closed'> 
+                <li><a href='/Admin_Rgpd'>RGPD</a></li>
+                <li><a href='/Gerer_monCompte?'>Mon compte</a></li> 
+               </ul>
+            </nav> ";
             default:
-                return ""; // Menu vide pour les autres catÃ©gories
+                return ""; // Menu vide pour les autres catégories
         }
-
-       
-
-
-
-
-
-
     }
 }

@@ -140,6 +140,10 @@ class Controleur_Gerer_Rgpd
                             $this->vue->setMenu(new Vue_Menu_Administration($_SESSION["idCategorie_utilisateur"]));
                             $this->vue->addToCorps(new Vue_AfficherMessage("Bienvenue !!"));
                             break;
+                        case 6:
+                            $this->vue->setMenu(new Vue_Menu_Administration($_SESSION["idCategorie_utilisateur"]));
+                            $this->vue->addToCorps(new Vue_AfficherMessage("Bienvenue dans l'espace RGPD"));
+                            break;
                         case 3:
                             //$_SESSION["typeConnexionBack"] = "entrepriseCliente";
                             $_SESSION["idEntreprise"] = Modele_Entreprise::Entreprise_Select_Par_IdUtilisateur($_SESSION["idUtilisateur"])["idEntreprise"];
@@ -178,3 +182,4 @@ class Controleur_Gerer_Rgpd
     }
 
 }
+
