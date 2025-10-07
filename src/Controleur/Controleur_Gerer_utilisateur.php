@@ -48,9 +48,19 @@ class Controleur_Gerer_utilisateur
     {
         $this->init();
         $idUtilisateur = (int)($args['id'] ?? 0);
-        //Mettre à jour dans la liste des entreprises
-        Modele_Utilisateur::Utilisateur_Modifier( $idUtilisateur, $_REQUEST["login"], $_REQUEST["codeCategorie"]);
-        $Utilisateur = Modele_Utilisateur::Utilisateur_Select_ParId( $idUtilisateur);
+        // Validation: le login doit être un email valide
+        if (!filter_var($_REQUEST["login"], FILTER_VALIDATE_EMAIL)) {
+            $listeNiveauAutorisation = Modele_categorie_utilisateur::categorie_utilisateur_Select();
+            $this->vue->addToCorps(new Vue_Utilisateur_Formulaire(false, $listeNiveauAutorisation, (string)$idUtilisateur, $_REQUEST["login"], $_REQUEST["codeCategorie"]));
+            $this->vue->addToCorps(new Vue_AfficherMessage("<br><label><b>Erreur : Vous devez saisir un mail valide</b></label>"));
+
+            $response->getBody()->write($this->vue->donneStr());
+            return $response;
+        }
+
+        //Mettre à jour dans la liste des utilisateurs
+        Modele_Utilisateur::Utilisateur_Modifier($idUtilisateur, $_REQUEST["login"], $_REQUEST["codeCategorie"]);
+        $Utilisateur = Modele_Utilisateur::Utilisateur_Select_ParId($idUtilisateur);
 
         $listeUtilisateur = Modele_Utilisateur:: Utilisateur_Select_Cafe();
         $this->vue->addToCorps(new Vue_Utilisateur_Liste($listeUtilisateur));
@@ -116,6 +126,16 @@ class Controleur_Gerer_utilisateur
         $this->init();
         // On regarde si le login est disponible : il ne faut pas que deux personnes aient le même login !
         $login_nouveau = $_REQUEST["login"];
+
+        // Validation: le login doit être un email valide
+        if (!filter_var($login_nouveau, FILTER_VALIDATE_EMAIL)) {
+            $listeNiveauAutorisation = Modele_categorie_utilisateur::categorie_utilisateurBack_Select();
+            $this->vue->addToCorps(new Vue_Utilisateur_Formulaire(true, $listeNiveauAutorisation));
+            $this->vue->addToCorps(new Vue_AfficherMessage("<br><label><b>Erreur : Vous devez saisir un mail valide</b></label>"));
+
+            $response->getBody()->write($this->vue->donneStr());
+            return $response;
+        }
         $listeUtilisateur = Modele_Utilisateur:: Utilisateur_Select_Cafe();
         $login_deja_attribue = false;
         for ($i = 0; $i < count($listeUtilisateur); $i++) {

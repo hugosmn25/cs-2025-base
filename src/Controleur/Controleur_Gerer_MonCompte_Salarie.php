@@ -13,6 +13,7 @@ use App\Vue\Vue_Utilisateur_Changement_MDP;
 use App\Utilitaire\Vue;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
+use function App\Fonctions\CalculComplexiteMdp;
 
 class Controleur_Gerer_MonCompte_Salarie
 {
@@ -51,6 +52,13 @@ class Controleur_Gerer_MonCompte_Salarie
                 $this->vue->setEntete(new Vue_Structure_Entete());
                 $quantiteMenu = Modele_Commande::Panier_Quantite($_SESSION["idEntreprise"]);
                 $this->vue->setMenu(new Vue_Menu_Entreprise_Salarie($quantiteMenu));
+                // Vérifie la complexité du nouveau mot de passe
+                $bits = CalculComplexiteMdp($_REQUEST["NouveauPassword"]);
+                if ($bits < 90) {
+                    $this->vue->addToCorps(new Vue_Utilisateur_Changement_MDP("<br><label><b>Complexité insuffisante (" . $bits . " bits). Minimum requis : 90 bits.</b></label>", "Gerer_MonCompte_Salarie"));
+                    $response->getBody()->write($this->vue->donneStr());
+                    return $response;
+                }
                 Modele_Salarie::Salarie_Modifier_motDePasse($_SESSION["idSalarie"], $_REQUEST["NouveauPassword"]);
                 $this->vue->addToCorps(new Vue_Compte_Administration_Gerer("<br><label><b>Votre mot de passe a bien été modifié</b></label>", "Gerer_MonCompte_Salarie"));
                 // Dans ce cas les mots de passe sont bons, il est donc modifier

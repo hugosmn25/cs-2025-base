@@ -71,8 +71,8 @@ INSERT INTO `categorie_utilisateur` (`id`, `libelle`, `description`) VALUES
 (2, 'gestionnaire café : catalogue', 'Gestionnaire du catalogue de l\'entreprise'),
 (3, 'entreprise cliente', 'entreprise cliente, pour administrer'),
 (4, 'salarie entreprise cliente', 'salarié pour traiter des commandes'),
-(5, 'Commercial Café', 'Salarié gérant les ventes et la relation avec les entreprises clientes');
-
+(5, 'Commercial Café', 'Salarié gérant les ventes et la relation avec les entreprises clientes'),
+(6, 'Gestioonnaire RGPD', 'Salarié en charge de la gestion des données personnelles');  
 -- --------------------------------------------------------
 
 --
@@ -1362,7 +1362,8 @@ INSERT INTO `utilisateur` (`idUtilisateur`, `login`, `motDePasse`, `idCategorie_
 (15, 'gerant@jazzy.local', 'secret', 4, 0, NULL, NULL, NULL, b'1'),
 (16, 'vendeur1@jazzy.local', 'secret', 4, 0, NULL, NULL, NULL, b'1'),
 (17, 'gerant@devbug.local', 'secret', 4, 0, NULL, NULL, NULL, b'1'),
-(18, 'vendeur1@devbug.local', 'secret', 4, 0, NULL, NULL, NULL, b'1');
+(18, 'vendeur1@devbug.local', 'secret', 4, 0, NULL, NULL, NULL, b'1'),
+(19, 'rgpd@cafe.local', 'rgpd', 6, 0, b'1', '2024-06-10', '::1', b'0' );
 
 -- --------------------------------------------------------
 
@@ -1594,6 +1595,40 @@ ALTER TABLE `commande_avoir_produit`
 --
 ALTER TABLE `produit`
   ADD CONSTRAINT `FK_produit` FOREIGN KEY (`idCategorie`) REFERENCES `categorie` (`idCategorie`);
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `historique_connexion`
+--
+
+CREATE TABLE IF NOT EXISTS `historique_connexion` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `idUtilisateur` int DEFAULT NULL,
+  `login` varchar(255) DEFAULT NULL,
+  `dateConnexion` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `ip` varchar(45) DEFAULT NULL,
+  `userAgent` varchar(255) DEFAULT NULL,
+  `reussite` tinyint(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`),
+  KEY `idx_hist_conn_user` (`idUtilisateur`),
+  KEY `idx_hist_conn_login_date` (`login`, `dateConnexion`),
+  CONSTRAINT `fk_hist_conn_user` FOREIGN KEY (`idUtilisateur`) REFERENCES `utilisateur` (`idUtilisateur`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Structure de la table `tentatives_connexion` (anti-bruteforce)
+--
+
+CREATE TABLE IF NOT EXISTS `tentatives_connexion` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `login` varchar(255) NOT NULL,
+  `dateTentative` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `ip` varchar(45) DEFAULT NULL,
+  `reussite` tinyint(1) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  KEY `idx_tentatives_login_date` (`login`, `dateTentative`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

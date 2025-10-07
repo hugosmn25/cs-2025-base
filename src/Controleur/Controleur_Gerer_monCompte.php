@@ -43,7 +43,7 @@ class Controleur_Gerer_monCompte
     public function submitModifMDP(Request $request, Response $response, array $args): Response
     {
         $this->init();
-         
+        
         //il faut récuperer le mdp en BDD et vérifier qu'ils sont identiques
         $utilisateur = Modele_Utilisateur::Utilisateur_Select_ParId($_SESSION["idUtilisateur"]);
         if ($_REQUEST["AncienPassword"] == $utilisateur["motDePasse"])
@@ -52,10 +52,17 @@ class Controleur_Gerer_monCompte
             if ($_REQUEST["NouveauPassword"] == $_REQUEST["ConfirmPassword"]) {
                 $this->vue->setEntete(new Vue_Structure_Entete());
                 $this->vue->setMenu(new Vue_Menu_Administration($_SESSION["idCategorie_utilisateur"]));
-                 
-                    Modele_Utilisateur::Utilisateur_Modifier_motDePasse($_SESSION["idUtilisateur"], $_REQUEST["NouveauPassword"]);
-                    $this->vue->addToCorps(new Vue_Compte_Administration_Gerer("<label><b>Votre mot de passe a bien été modifié</b></label>"));
-                    // Dans ce cas les mots de passe sont bons, il est donc modifié
+                // Vérifie la complexité du nouveau mot de passe
+                $bits = CalculComplexiteMdp($_REQUEST["NouveauPassword"]);
+                if ($bits < 90) {
+                    $this->vue->addToCorps(new Vue_Utilisateur_Changement_MDP("<label><b>Complexité insuffisante (" . $bits . " bits). Minimum requis : 90 bits.</b></label>", "Gerer_monCompte"));
+                    $response->getBody()->write($this->vue->donneStr());
+                    return $response;
+                }
+
+                Modele_Utilisateur::Utilisateur_Modifier_motDePasse($_SESSION["idUtilisateur"], $_REQUEST["NouveauPassword"]);
+                $this->vue->addToCorps(new Vue_Compte_Administration_Gerer("<label><b>Votre mot de passe a bien été modifié</b></label>"));
+                // Dans ce cas les mots de passe sont bons, il est donc modifié
                 
             } else {
                 $this->vue->setEntete(new Vue_Structure_Entete());

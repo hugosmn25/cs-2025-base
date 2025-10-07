@@ -54,8 +54,8 @@ private string $categorieUtilisateur="";
             </td>
             <td>
     
-                <input type='text' required name='login'
-                       pattern='[A-z\ ]{0,30}' placeholder='login' autofocus value='$this->login'>
+                <input type='email' required name='login'
+                       placeholder='email' autofocus value='$this->login'>
             </td>
         </tr>
         <tr>

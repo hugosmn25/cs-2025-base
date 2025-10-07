@@ -24,7 +24,7 @@ class Modele_categorie_utilisateur
         $requetePreparee = $connexionPDO->prepare('
         select * 
         from `categorie_utilisateur` 
-        where id in (1,2,6)
+        where id in (1,2,5,6)
         ');
         $reponse = $requetePreparee->execute(); //$reponse boolean sur l'état de la requête
 

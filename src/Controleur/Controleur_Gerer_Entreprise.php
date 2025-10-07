@@ -16,6 +16,7 @@ use App\Vue\Vue_Structure_Entete;
 use App\Utilitaire\Vue;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
+use function App\Fonctions\CalculComplexiteMdp;
 
 class Controleur_Gerer_Entreprise
 {
@@ -151,6 +152,13 @@ class Controleur_Gerer_Entreprise
         if (password_verify($_REQUEST["AncienPassword"], $entreprise_connectee["motDePasse"])) {
             //on vérifie si le mot de passe de la BDD est le même que celui rentré
             if ($_REQUEST["NouveauPassword"] == $_REQUEST["ConfirmPassword"]) {
+                // Vérifie la complexité du nouveau mot de passe
+                $bits = CalculComplexiteMdp($_REQUEST["NouveauPassword"]);
+                if ($bits < 90) {
+                    $this->vue->addToCorps(new Vue_Utilisateur_Changement_MDP("<label><b>Complexité insuffisante (" . $bits . " bits). Minimum requis : 90 bits.</b></label>"));
+                    $response->getBody()->write($this->vue->donneStr());
+                    return $response;
+                }
                 Modele_Entreprise::Entreprise_Modifier_motDePasse($_SESSION["idEntreprise"], $_REQUEST["NouveauPassword"]);
                 $this->vue->addToCorps(new Vue_Entreprise_Gerer_Compte("<label><b>Votre mot de passe a bien été modifié</b></label>"));
                 // Dans ce cas les mots de passe sont bons, il est donc modifié

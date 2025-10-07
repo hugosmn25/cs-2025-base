@@ -57,6 +57,8 @@ switch ((int) $typeConnexion) {
 
         $app->post('/visiteur/SeConnecter', [$visiteurController, 'SeConnecter']);
         $app->post('/SeConnecter', [$visiteurController, 'SeConnecter']);
+        $app->get('/visiteur/SeConnecter', [$visiteurController, 'SeConnecter']);
+        $app->get('/SeConnecter', [$visiteurController, 'SeConnecter']);
         $app->get('/reinitmdp', [$visiteurController, 'reinitmdp']);
         $app->post('/reinitmdpconfirm', [$visiteurController, 'reinitmdpconfirm']);
         $app->get('/visiteur/reinitmdp', [$visiteurController, 'reinitmdp']);
@@ -117,6 +119,7 @@ switch ((int) $typeConnexion) {
         $app->get('/Gerer_monCompte/changerMDP', [$monCompteBackController, 'changerMDP']);
         $app->post('/Gerer_monCompte/submitModifMDP', [$monCompteBackController, 'submitModifMDP']);
         $app->get('/Gerer_monCompte/SeDeconnecter', [$monCompteBackController, 'SeDeconnecter']);
+        $app->post('/visiteur/SeConnecter', [$visiteurController, 'SeConnecter']);
         $app->post('/SeConnecter', [$visiteurController, 'SeConnecter']);
         $app->get('/visiteur/SeConnecter', [$visiteurController, 'SeConnecter']);
         $app->get('/SeConnecter', [$visiteurController, 'SeConnecter']);
@@ -146,6 +149,7 @@ switch ((int) $typeConnexion) {
         $app->get('/Gerer_monCompte/SeDeconnecter', [$monCompteBackController, 'SeDeconnecter']);
 
         $app->post('/visiteur/submitModifMDPForce', [$visiteurController, 'submitModifMDPForce']);
+        $app->post('/visiteur/SeConnecter', [$visiteurController, 'SeConnecter']);
         $app->post('/SeConnecter', [$visiteurController, 'SeConnecter']);
         $app->get('/visiteur/SeConnecter', [$visiteurController, 'SeConnecter']);
         $app->get('/SeConnecter', [$visiteurController, 'SeConnecter']);

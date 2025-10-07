@@ -18,6 +18,8 @@ use App\Utilitaire\Vue;
 use App\Modele\Modele_FinalitesConsentement;
 use App\Modele\Modele_VersionsPolitique;
 use App\Modele\Modele_Consentements;
+use App\Modele\Modele_HistoriqueConnexion;
+// (supprimé) use App\Modele\Modele_TentativesConnexion;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
 use function App\Fonctions\CalculComplexiteMdp;
@@ -69,8 +71,22 @@ class Controleur_visiteur
     public function submitModifMDPForce(Request $request, Response $response, array $args): Response
     {
         $this->init();
+        // Session requise pour modifier le MDP imposé
+        if (!isset($_SESSION["idUtilisateur"]) || empty($_SESSION["idUtilisateur"])) {
+            $this->vue->addToCorps(new Vue_Connexion_Formulaire_client("Session expirée. Veuillez vous reconnecter."));
+            $response->getBody()->write($this->vue->donneStr());
+            return $response;
+        }
         if ($_REQUEST["NouveauPassword"] == $_REQUEST["ConfirmPassword"]) {
             $this->vue->setEntete(new Vue_Structure_Entete());
+
+            // Vérifie la complexité du nouveau mot de passe
+            $bits = CalculComplexiteMdp($_REQUEST["NouveauPassword"]);
+            if ($bits < 90) {
+                $this->vue->addToCorps(new Vue_Utilisateur_Changement_MDPForce("<label><b>Complexité insuffisante (" . $bits . " bits). Minimum requis : 90 bits.</b></label>"));
+                $response->getBody()->write($this->vue->donneStr());
+                return $response;
+            }
 
             Modele_Utilisateur::Utilisateur_Modifier_motDePasse($_SESSION["idUtilisateur"], $_REQUEST["NouveauPassword"]);
             Modele_Utilisateur::Utilisateur_Modifier_DoitChangerMdp($_SESSION["idUtilisateur"], (int) 0);
@@ -134,13 +150,46 @@ class Controleur_visiteur
             unset($_SESSION);
         }
         if (isset($_REQUEST["compte"]) and isset($_REQUEST["password"])) {
-            $utilisateur = Modele_Utilisateur::Utilisateur_Select_ParLogin($_REQUEST["compte"]);
+            $loginSaisi = $_REQUEST["compte"];
+            // Anti-bruteforce: 5 tentatives erronées -> blocage 2 minutes
+            $nbEchecsRecents = Modele_HistoriqueConnexion::HistoriqueConnexion_NombreEchecsRecents($loginSaisi, 120);
+            if ($nbEchecsRecents >= 5) {
+                // Calcule une indication du temps restant si possible
+                $dernier = Modele_HistoriqueConnexion::HistoriqueConnexion_DerniereEchec($loginSaisi);
+                $msgError = "Trop de tentatives. Réessayez dans 2 minutes.";
+                if ($dernier) {
+                    $resteSec = 120;
+                    try {
+                        $tsDernier = strtotime($dernier);
+                        if ($tsDernier) { $resteSec = max(0, 120 - (time() - $tsDernier)); }
+                    } catch (\Throwable $e) {}
+                    if ($resteSec > 0) {
+                        $min = intdiv($resteSec, 60); $sec = $resteSec % 60;
+                        $msgError = sprintf("Trop de tentatives. Réessayez dans %d:%02d.", $min, $sec);
+                    }
+                }
+                $this->vue->addToCorps(new Vue_Connexion_Formulaire_client($msgError));
+                $response->getBody()->write($this->vue->donneStr());
+                return $response;
+            }
+
+            $utilisateur = Modele_Utilisateur::Utilisateur_Select_ParLogin($loginSaisi);
 
             if ($utilisateur != null) {
                 if ($utilisateur["desactiver"] == 0) {
                     if ($_REQUEST["password"] == $utilisateur["motDePasse"]) {
                         $_SESSION["idUtilisateur"] = $utilisateur["idUtilisateur"];
                         $_SESSION["idCategorie_utilisateur"] = $utilisateur["idCategorie_utilisateur"];
+                        // Enregistre succès
+                        $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+                        // suivi consolidé dans historique_connexion (reussite = 1)
+
+                        // Dernière connexion (avant celle-ci)
+                        $derniereConnexion = Modele_HistoriqueConnexion::HistoriqueConnexion_Derniere($utilisateur["idUtilisateur"]);
+                        // Enregistre la connexion courante
+                        $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+                        $ua = $_SERVER['HTTP_USER_AGENT'] ?? null;
+                        Modele_HistoriqueConnexion::HistoriqueConnexion_Ajouter($utilisateur["idUtilisateur"], $ip, $ua);
 
                         if ($utilisateur["DoitChangerMotDePasse"] == 1) {
                             $this->vue->addToCorps(new \App\Vue\Vue_Utilisateur_Changement_MDPForce());
@@ -153,10 +202,16 @@ class Controleur_visiteur
                                         //$_SESSION["typeConnexionBack"] = "gestionnaireCatalogue";
                                         $this->vue->setMenu(new Vue_Menu_Administration($_SESSION["idCategorie_utilisateur"]));
                                         $this->vue->addToCorps(new Vue_AfficherMessage("Bienvenue !!"));
+                                        if ($derniereConnexion) {
+                                            $this->vue->addToCorps(new Vue_AfficherMessage("Dernière connexion : " . $derniereConnexion));
+                                        }
                                         break;
                                     case 6:
                                         $this->vue->setMenu(new Vue_Menu_Administration($_SESSION["idCategorie_utilisateur"]));
                                         $this->vue->addToCorps(new Vue_AfficherMessage("Bienvenue dans l'espace RGPD"));
+                                        if ($derniereConnexion) {
+                                            $this->vue->addToCorps(new Vue_AfficherMessage("Dernière connexion : " . $derniereConnexion));
+                                        }
                                         break;
                                     case 3:
                                         //$_SESSION["typeConnexionBack"] = "entrepriseCliente";
@@ -185,7 +240,15 @@ class Controleur_visiteur
                             }
                         }
                     } else {
-                        $msgError = "Mot de passe erroné";
+                        // Enregistre échec
+                        $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+                        $ua = $_SERVER['HTTP_USER_AGENT'] ?? null;
+                        Modele_HistoriqueConnexion::HistoriqueConnexion_EnregistrerTentative($loginSaisi, false, $utilisateur["idUtilisateur"], $ip, $ua);
+                        $nbEchecs = Modele_HistoriqueConnexion::HistoriqueConnexion_NombreEchecsRecents($loginSaisi, 120);
+                        $restantes = max(0, 5 - $nbEchecs);
+                        $msgError = $restantes > 0
+                            ? "Mot de passe erroné. Tentatives restantes avant blocage: " . $restantes
+                            : "Mot de passe erroné. Compte temporairement bloqué (2 minutes).";
                         $this->vue->addToCorps(new Vue_Connexion_Formulaire_client($msgError));
                     }
                 } else {
@@ -193,7 +256,15 @@ class Controleur_visiteur
                     $this->vue->addToCorps(new Vue_Connexion_Formulaire_client($msgError));
                 }
             } else {
-                $msgError = "Identification invalide";
+                // Enregistre échec sur un login inexistant également
+                $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+                $ua = $_SERVER['HTTP_USER_AGENT'] ?? null;
+                Modele_HistoriqueConnexion::HistoriqueConnexion_EnregistrerTentative($loginSaisi, false, null, $ip, $ua);
+                $nbEchecs = Modele_HistoriqueConnexion::HistoriqueConnexion_NombreEchecsRecents($loginSaisi, 120);
+                $restantes = max(0, 5 - $nbEchecs);
+                $msgError = $restantes > 0
+                    ? "Identification invalide. Tentatives restantes avant blocage: " . $restantes
+                    : "Identification invalide. Compte temporairement bloqué (2 minutes).";
                 $this->vue->addToCorps(new Vue_Connexion_Formulaire_client($msgError));
             }
         } else {
