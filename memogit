@@ -1,0 +1,12 @@
+Avoir la liste des remotes
+git remote -v 
+
+Changer le dépot
+git remote set-url CS_2025_base https://github.com/jeanbaptisteaubry/CS_2025_Private.git
+
+Récupérer la liste des branches
+git fetch CS_2025_base
+git branch -r
+
+Récupérer en local une branche distante
+git checkout -b 3-Advanced-RGPD-Correction CS_2025_base/3-Advanced-RGPD-Correction
