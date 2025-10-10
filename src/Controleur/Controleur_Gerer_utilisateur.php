@@ -82,7 +82,7 @@ class Controleur_Gerer_utilisateur
 
         }
         else {
-            $nouveauMdp = "secret";
+            $nouveauMdp = genereMDP(12);
             $resultat=envoyerMail("administration@cafe.local", "Administrateur café", $Utilisateur["login"],$Utilisateur["login"],  "Réinitialisation de votre mot de passe", "Votre nouveau mot de passe est : " . $nouveauMdp);
 
             switch ($resultat)

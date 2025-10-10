@@ -14,17 +14,19 @@ use App\Vue\Vue_Menu_Administration;
 use App\Vue\Vue_Structure_BasDePage;
 use App\Vue\Vue_Structure_Entete;
 use App\Vue\Vue_Utilisateur_Changement_MDPForce;
+use App\Vue\Vue_Utilisateur_Formulaire;
 use App\Utilitaire\Vue;
 use App\Modele\Modele_FinalitesConsentement;
 use App\Modele\Modele_VersionsPolitique;
 use App\Modele\Modele_Consentements;
 use App\Modele\Modele_HistoriqueConnexion;
+use App\Modele\Modele_categorie_utilisateur;
 // (supprimé) use App\Modele\Modele_TentativesConnexion;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
 use function App\Fonctions\CalculComplexiteMdp;
 use function App\Fonctions\envoyerMail;
-
+use function App\Fonctions\genereMDP;
 class Controleur_visiteur
 {
     private Vue $vue;
@@ -53,7 +55,35 @@ class Controleur_visiteur
             $this->vue->addToCorps(new Vue_Mail_ReinitMdp());
             $this->vue->addToCorps(new Vue_AfficherMessage("<br><label><b>Erreur : Vous devez saisir un mail valide</b></label>"));
         } else {
+            /** Compléter ici en envoyant un e-mail avec un mot de passe généré par /src/fonction/GenereMDP */
+            $Utilisateur = Modele_Utilisateur::Utilisateur_Select_ParLogin($_REQUEST["email"]);
+            if ($Utilisateur != null) {
+                $nouveauMdp = genereMDP(12);
+                $resultat = envoyerMail("administration@cafe.local", "Administrateur café", $Utilisateur["login"], $Utilisateur["login"], "Réinitialisation de votre mot de passe", "Votre nouveau mot de passe est : " . $nouveauMdp);
 
+                switch ($resultat) {
+                    case -1:
+                        $listeNiveauAutorisation = Modele_categorie_utilisateur::categorie_utilisateur_Select();
+                        $this->vue->addToCorps(new Vue_Mail_ReinitMdp());
+                        $this->vue->addToCorps(new Vue_AfficherMessage("<br><label><b>Erreur : Le mail n'a pas pu être envoyé, erreurs de paramètres</b></label>"));
+                        break;
+                    case 0:
+                        $listeNiveauAutorisation = Modele_categorie_utilisateur::categorie_utilisateur_Select();
+                        $this->vue->addToCorps(new Vue_Mail_ReinitMdp());
+                        $this->vue->addToCorps(new Vue_AfficherMessage("<br><label><b>Erreur : Le mail n'a pas pu être envoyé, erreur indéterminée</b></label>"));
+                        break;
+                    case 1:
+                        Modele_Utilisateur::Utilisateur_Modifier_motDePasse($Utilisateur["idUtilisateur"], $nouveauMdp); //$Utilisateur["idUtilisateur"]
+                        Modele_Utilisateur::Utilisateur_DoitChangerMdp($Utilisateur["idUtilisateur"], 1);
+                        $listeUtilisateur = Modele_Utilisateur::Utilisateur_Select_Cafe();
+                        $this->vue->addToCorps(new Vue_Mail_ReinitMdp());
+                        $this->vue->addToCorps(new Vue_AfficherMessage("<br><label><b>Mail envoyé</b></label>"));
+                        break;
+                }
+            } else {
+                $this->vue->addToCorps(new Vue_Mail_ReinitMdp());
+                $this->vue->addToCorps(new Vue_AfficherMessage("<br><label><b>Erreur : Aucun utilisateur n'est enregistré avec ce mail</b></label>"));
+            }
 
         }
         $response->getBody()->write($this->vue->donneStr());
@@ -125,8 +155,10 @@ class Controleur_visiteur
                 $finalites = Modele_FinalitesConsentement::FinalitesConsentement_Select_Actives();
                 $consentsMap = [];
                 foreach ($finalites as $f) {
-                    $last = Modele_Consentements::Consentements_Select_Dernier_ByUtilisateur_Finalite($utilisateur["idUtilisateur"], (int)$f['id']);
-                    if ($last) { $consentsMap[(int)$f['id']] = $last['statut']; }
+                    $last = Modele_Consentements::Consentements_Select_Dernier_ByUtilisateur_Finalite($utilisateur["idUtilisateur"], (int) $f['id']);
+                    if ($last) {
+                        $consentsMap[(int) $f['id']] = $last['statut'];
+                    }
                 }
                 $this->vue->addToCorps(new Vue_ConsentementRGPD($utilisateur, $politique, $finalites, $consentsMap));
             }
@@ -161,10 +193,14 @@ class Controleur_visiteur
                     $resteSec = 120;
                     try {
                         $tsDernier = strtotime($dernier);
-                        if ($tsDernier) { $resteSec = max(0, 120 - (time() - $tsDernier)); }
-                    } catch (\Throwable $e) {}
+                        if ($tsDernier) {
+                            $resteSec = max(0, 120 - (time() - $tsDernier));
+                        }
+                    } catch (\Throwable $e) {
+                    }
                     if ($resteSec > 0) {
-                        $min = intdiv($resteSec, 60); $sec = $resteSec % 60;
+                        $min = intdiv($resteSec, 60);
+                        $sec = $resteSec % 60;
                         $msgError = sprintf("Trop de tentatives. Réessayez dans %d:%02d.", $min, $sec);
                     }
                 }
@@ -233,8 +269,10 @@ class Controleur_visiteur
                                 $finalites = Modele_FinalitesConsentement::FinalitesConsentement_Select_Actives();
                                 $consentsMap = [];
                                 foreach ($finalites as $f) {
-                                    $last = Modele_Consentements::Consentements_Select_Dernier_ByUtilisateur_Finalite($utilisateur["idUtilisateur"], (int)$f['id']);
-                                    if ($last) { $consentsMap[(int)$f['id']] = $last['statut']; }
+                                    $last = Modele_Consentements::Consentements_Select_Dernier_ByUtilisateur_Finalite($utilisateur["idUtilisateur"], (int) $f['id']);
+                                    if ($last) {
+                                        $consentsMap[(int) $f['id']] = $last['statut'];
+                                    }
                                 }
                                 $this->vue->addToCorps(new Vue_ConsentementRGPD($utilisateur, $politique, $finalites, $consentsMap));
                             }
