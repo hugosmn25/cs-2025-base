@@ -20,7 +20,6 @@ use App\Modele\Modele_FinalitesConsentement;
 use App\Modele\Modele_VersionsPolitique;
 use App\Modele\Modele_Consentements;
 use App\Modele\Modele_HistoriqueConnexion;
-use App\Modele\Modele_categorie_utilisateur;
 // (supprimé) use App\Modele\Modele_TentativesConnexion;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -55,30 +54,66 @@ class Controleur_visiteur
             $this->vue->addToCorps(new Vue_Mail_ReinitMdp());
             $this->vue->addToCorps(new Vue_AfficherMessage("<br><label><b>Erreur : Vous devez saisir un mail valide</b></label>"));
         } else {
-            /** Compléter ici en envoyant un e-mail avec un mot de passe généré par /src/fonction/GenereMDP */
             $Utilisateur = Modele_Utilisateur::Utilisateur_Select_ParLogin($_REQUEST["email"]);
             if ($Utilisateur != null) {
-                $nouveauMdp = genereMDP(12);
-                $resultat = envoyerMail("administration@cafe.local", "Administrateur café", $Utilisateur["login"], $Utilisateur["login"], "Réinitialisation de votre mot de passe", "Votre nouveau mot de passe est : " . $nouveauMdp);
+                $now = new \DateTimeImmutable('now');
+                $motDePasseTemporaireActif = false;
+                $expirationActuelle = null;
+                $motDePasseTemporaireEnCours = $Utilisateur["motDePasseTemporaire"] ?? null;
+                $expirationEnCours = $Utilisateur["expirationMotDePasseTemporaire"] ?? null;
 
-                switch ($resultat) {
-                    case -1:
-                        $listeNiveauAutorisation = Modele_categorie_utilisateur::categorie_utilisateur_Select();
+                if (!empty($motDePasseTemporaireEnCours) && !empty($expirationEnCours)) {
+                    try {
+                        $expirationActuelle = new \DateTimeImmutable($expirationEnCours);
+                    } catch (\Exception $e) {
+                        $expirationActuelle = null;
+                    }
+
+                    if ($expirationActuelle && $expirationActuelle > $now) {
+                        $motDePasseTemporaireActif = true;
+                    } else {
+                        Modele_Utilisateur::Utilisateur_SupprimerMotDePasseTemporaire($Utilisateur["idUtilisateur"]);
+                        $Utilisateur["motDePasseTemporaire"] = null;
+                        $Utilisateur["expirationMotDePasseTemporaire"] = null;
+                        $motDePasseTemporaireEnCours = null;
+                        $expirationActuelle = null;
+                    }
+                }
+
+                if ($motDePasseTemporaireActif) {
+                    $this->vue->addToCorps(new Vue_Mail_ReinitMdp());
+                    $infoExpiration = $expirationActuelle ? $expirationActuelle->format('d/m/Y H:i') : "bientôt";
+                    $this->vue->addToCorps(new Vue_AfficherMessage("<br><label><b>Un mot de passe temporaire est déjà actif. Vérifiez votre boîte mail ou réessayez après expiration (valide jusqu'au " . $infoExpiration . ").</b></label>"));
+                } else {
+                    $nouveauMdp = genereMDP(nbChar: 18);
+                    $expiration = $now->add(new \DateInterval('PT1H'));
+
+                    if (!Modele_Utilisateur::Utilisateur_DefinirMotDePasseTemporaire($Utilisateur["idUtilisateur"], $nouveauMdp, $expiration)) {
                         $this->vue->addToCorps(new Vue_Mail_ReinitMdp());
-                        $this->vue->addToCorps(new Vue_AfficherMessage("<br><label><b>Erreur : Le mail n'a pas pu être envoyé, erreurs de paramètres</b></label>"));
-                        break;
-                    case 0:
-                        $listeNiveauAutorisation = Modele_categorie_utilisateur::categorie_utilisateur_Select();
-                        $this->vue->addToCorps(new Vue_Mail_ReinitMdp());
-                        $this->vue->addToCorps(new Vue_AfficherMessage("<br><label><b>Erreur : Le mail n'a pas pu être envoyé, erreur indéterminée</b></label>"));
-                        break;
-                    case 1:
-                        Modele_Utilisateur::Utilisateur_Modifier_motDePasse($Utilisateur["idUtilisateur"], $nouveauMdp); //$Utilisateur["idUtilisateur"]
+                        $this->vue->addToCorps(new Vue_AfficherMessage("<br><label><b>Erreur : Impossible de préparer la réinitialisation du mot de passe.</b></label>"));
+                    } else {
                         Modele_Utilisateur::Utilisateur_DoitChangerMdp($Utilisateur["idUtilisateur"], 1);
-                        $listeUtilisateur = Modele_Utilisateur::Utilisateur_Select_Cafe();
-                        $this->vue->addToCorps(new Vue_Mail_ReinitMdp());
-                        $this->vue->addToCorps(new Vue_AfficherMessage("<br><label><b>Mail envoyé</b></label>"));
-                        break;
+                        $expirationTexte = $expiration->format('d/m/Y H:i');
+                        $messageMail = "Votre mot de passe temporaire est : <b>" . $nouveauMdp . "</b><br>Il expirera le " . $expirationTexte . ".<br>Utilisez-le pour vous connecter puis changez-le dès que possible.";
+                        $resultat = envoyerMail("administration@cafe.local", "Administrateur café", $Utilisateur["login"], $Utilisateur["login"], "Réinitialisation de votre mot de passe", $messageMail);
+
+                        switch ($resultat) {
+                            case -1:
+                                Modele_Utilisateur::Utilisateur_SupprimerMotDePasseTemporaire($Utilisateur["idUtilisateur"]);
+                                $this->vue->addToCorps(new Vue_Mail_ReinitMdp());
+                                $this->vue->addToCorps(new Vue_AfficherMessage("<br><label><b>Erreur : Le mail n'a pas pu être envoyé, erreurs de paramètres</b></label>"));
+                                break;
+                            case 0:
+                                Modele_Utilisateur::Utilisateur_SupprimerMotDePasseTemporaire($Utilisateur["idUtilisateur"]);
+                                $this->vue->addToCorps(new Vue_Mail_ReinitMdp());
+                                $this->vue->addToCorps(new Vue_AfficherMessage("<br><label><b>Erreur : Le mail n'a pas pu être envoyé, erreur indéterminée</b></label>"));
+                                break;
+                            case 1:
+                                $this->vue->addToCorps(new Vue_Mail_ReinitMdp());
+                                $this->vue->addToCorps(new Vue_AfficherMessage("<br><label><b>Mail envoyé. Le mot de passe temporaire expire le " . $expirationTexte . ".</b></label>"));
+                                break;
+                        }
+                    }
                 }
             } else {
                 $this->vue->addToCorps(new Vue_Mail_ReinitMdp());
@@ -213,17 +248,50 @@ class Controleur_visiteur
 
             if ($utilisateur != null) {
                 if ($utilisateur["desactiver"] == 0) {
-                    if ($_REQUEST["password"] == $utilisateur["motDePasse"]) {
+                    $motDePasseSaisi = $_REQUEST["password"];
+                    $motDePasseValide = false;
+                    $motDePasseTemporaireValide = false;
+                    $motDePasseTemporaireExpireSaisi = false;
+
+                    $motDePasseTemporaireInitial = $utilisateur["motDePasseTemporaire"] ?? null;
+                    $motDePasseTemporaireEnCours = $motDePasseTemporaireInitial;
+                    $expirationTemporaireEnCours = $utilisateur["expirationMotDePasseTemporaire"] ?? null;
+                    $dateExpirationTemporaire = null;
+                    if (!empty($motDePasseTemporaireEnCours) && !empty($expirationTemporaireEnCours)) {
+                        try {
+                            $dateExpirationTemporaire = new \DateTimeImmutable($expirationTemporaireEnCours);
+                        } catch (\Exception $e) {
+                            $dateExpirationTemporaire = null;
+                        }
+                        $now = new \DateTimeImmutable('now');
+                        if ($dateExpirationTemporaire && $dateExpirationTemporaire > $now) {
+                            $motDePasseTemporaireValide = true;
+                        } else {
+                            Modele_Utilisateur::Utilisateur_SupprimerMotDePasseTemporaire($utilisateur["idUtilisateur"]);
+                            $motDePasseTemporaireEnCours = null;
+                        }
+                    }
+
+                    if ($motDePasseSaisi === $utilisateur["motDePasse"]) {
+                        $motDePasseValide = true;
+                    } elseif ($motDePasseTemporaireValide && $motDePasseSaisi === $motDePasseTemporaireEnCours) {
+                        $motDePasseValide = true;
+                        Modele_Utilisateur::Utilisateur_Modifier_motDePasse($utilisateur["idUtilisateur"], $motDePasseTemporaireEnCours);
+                        Modele_Utilisateur::Utilisateur_DoitChangerMdp($utilisateur["idUtilisateur"], 1);
+                        $utilisateur = Modele_Utilisateur::Utilisateur_Select_ParId($utilisateur["idUtilisateur"]);
+                    } elseif (!$motDePasseTemporaireValide && !empty($motDePasseTemporaireInitial) && $motDePasseSaisi === $motDePasseTemporaireInitial) {
+                        $motDePasseTemporaireExpireSaisi = true;
+                    }
+
+                    if ($motDePasseValide) {
                         $_SESSION["idUtilisateur"] = $utilisateur["idUtilisateur"];
                         $_SESSION["idCategorie_utilisateur"] = $utilisateur["idCategorie_utilisateur"];
                         // Enregistre succès
                         $ip = $_SERVER['REMOTE_ADDR'] ?? null;
-                        // suivi consolidé dans historique_connexion (reussite = 1)
 
                         // Dernière connexion (avant celle-ci)
                         $derniereConnexion = Modele_HistoriqueConnexion::HistoriqueConnexion_Derniere($utilisateur["idUtilisateur"]);
                         // Enregistre la connexion courante
-                        $ip = $_SERVER['REMOTE_ADDR'] ?? null;
                         $ua = $_SERVER['HTTP_USER_AGENT'] ?? null;
                         Modele_HistoriqueConnexion::HistoriqueConnexion_Ajouter($utilisateur["idUtilisateur"], $ip, $ua);
 
@@ -261,8 +329,6 @@ class Controleur_visiteur
                                         //  include "./Controleur/Controleur_Catalogue_client.php";
                                         //$catalogueClientController = new \App\Controleur\Controleur_Catalogue_client($Vue);
                                         return $this->catalogue_clientController->default($request, $response, $args);
-
-
                                 }
                             } else {
                                 $politique = Modele_VersionsPolitique::VersionsPolitique_Select_Courante();
@@ -283,10 +349,14 @@ class Controleur_visiteur
                         $ua = $_SERVER['HTTP_USER_AGENT'] ?? null;
                         Modele_HistoriqueConnexion::HistoriqueConnexion_EnregistrerTentative($loginSaisi, false, $utilisateur["idUtilisateur"], $ip, $ua);
                         $nbEchecs = Modele_HistoriqueConnexion::HistoriqueConnexion_NombreEchecsRecents($loginSaisi, 120);
-                        $restantes = max(0, 5 - $nbEchecs);
-                        $msgError = $restantes > 0
-                            ? "Mot de passe erroné. Tentatives restantes avant blocage: " . $restantes
-                            : "Mot de passe erroné. Compte temporairement bloqué (2 minutes).";
+                        if ($motDePasseTemporaireExpireSaisi) {
+                            $msgError = "Mot de passe temporaire expire. Veuillez redemander une reinitialisation.";
+                        } else {
+                            $restantes = max(0, 5 - $nbEchecs);
+                            $msgError = $restantes > 0
+                                ? "Mot de passe erroné. Tentatives restantes avant blocage: " . $restantes
+                                : "Mot de passe erroné. Compte temporairement bloqué (2 minutes).";
+                        }
                         $this->vue->addToCorps(new Vue_Connexion_Formulaire_client($msgError));
                     }
                 } else {

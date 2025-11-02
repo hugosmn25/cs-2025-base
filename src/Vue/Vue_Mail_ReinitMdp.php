@@ -22,6 +22,11 @@ class Vue_Mail_ReinitMdp extends Vue_Composant
                             Renouveler mdp
                 </button>";
         $str .=  "
+</form>
+ <form action='/' method='get' style='    width: 50%;    display: block;    margin: auto;'>
+        <button type='submit'  >
+                            Retour au formulaire de connexion
+                                            </button>
  </form>
     ";
         return $str;

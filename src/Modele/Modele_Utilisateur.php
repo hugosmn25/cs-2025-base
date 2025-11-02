@@ -188,10 +188,11 @@ WHERE idUtilisateur = :paramidUtilisateur');
 
     {
         $connexionPDO = Singleton_ConnexionPDO::getInstance();
-         $requetePreparee = $connexionPDO->prepare(
+        $requetePreparee = $connexionPDO->prepare(
             'UPDATE `utilisateur` 
-SET motDePasse = :parammotDePasse
-
+SET motDePasse = :parammotDePasse,
+    motDePasseTemporaire = NULL,
+    expirationMotDePasseTemporaire = NULL
 WHERE idUtilisateur = :paramidUtilisateur');
         $requetePreparee->bindParam('parammotDePasse', $motDePasse);
         $requetePreparee->bindParam('paramidUtilisateur', $idUtilisateur);
@@ -212,10 +213,39 @@ WHERE idUtilisateur = :paramidUtilisateur');
 
         $requetePreparee = $connexionPDO->prepare(
             'UPDATE `utilisateur` 
-SET motDePasse = :parammotDePasse ');
+SET motDePasse = :parammotDePasse,
+    motDePasseTemporaire = NULL,
+    expirationMotDePasseTemporaire = NULL ');
         $requetePreparee->bindParam('parammotDePasse', $motDePasse);
         $reponse = $requetePreparee->execute(); //$reponse boolean sur l'état de la requête
         return $reponse;
+    }
+
+    public static function Utilisateur_DefinirMotDePasseTemporaire(int $idUtilisateur, string $motDePasseTemporaire, \DateTimeInterface $expiration): bool
+    {
+        $connexionPDO = Singleton_ConnexionPDO::getInstance();
+        $requetePreparee = $connexionPDO->prepare(
+            'UPDATE `utilisateur`
+SET motDePasseTemporaire = :parammotDePasseTemporaire,
+    expirationMotDePasseTemporaire = :paramexpiration
+WHERE idUtilisateur = :paramidUtilisateur');
+        $requetePreparee->bindParam('parammotDePasseTemporaire', $motDePasseTemporaire);
+        $expirationStr = $expiration->format('Y-m-d H:i:s');
+        $requetePreparee->bindParam('paramexpiration', $expirationStr);
+        $requetePreparee->bindParam('paramidUtilisateur', $idUtilisateur, PDO::PARAM_INT);
+        return (bool) $requetePreparee->execute();
+    }
+
+    public static function Utilisateur_SupprimerMotDePasseTemporaire(int $idUtilisateur): bool
+    {
+        $connexionPDO = Singleton_ConnexionPDO::getInstance();
+        $requetePreparee = $connexionPDO->prepare(
+            'UPDATE `utilisateur`
+SET motDePasseTemporaire = NULL,
+    expirationMotDePasseTemporaire = NULL
+WHERE idUtilisateur = :paramidUtilisateur');
+        $requetePreparee->bindParam('paramidUtilisateur', $idUtilisateur, PDO::PARAM_INT);
+        return (bool) $requetePreparee->execute();
     }
 
     public static function Utilisateur_DoitChangerMdp(int $idUtilisateur, int $valBool)
