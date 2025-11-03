@@ -1280,16 +1280,16 @@ CREATE TABLE `salarie` (
 -- Données de la table `salarie`
 --
 INSERT INTO `salarie` (`idSalarie`,`nom`,`prenom`,`mail`,`idEntreprise`,`roleEntreprise`,`actif`) VALUES
-(9,'Gerant','Auto','gerant@zoombox.local',1,'Gérant',49),
-(10,'Vendeur','Un','vendeur1@zoombox.local',1,'Vendeur',49),
-(11,'Gerant','Auto','gerant@edgeblab.local',2,'Gérant',49),
-(12,'Vendeur','Un','vendeur1@edgeblab.local',2,'Vendeur',49),
-(13,'Gerant','Auto','gerant@gabcube.local',3,'Gérant',49),
-(14,'Vendeur','Un','vendeur1@gabcube.local',3,'Vendeur',49),
-(15,'Gerant','Auto','gerant@jazzy.local',4,'Gérant',49),
-(16,'Vendeur','Un','vendeur1@jazzy.local',4,'Vendeur',49),
-(17,'Gerant','Auto','gerant@devbug.local',5,'Gérant',49),
-(18,'Vendeur','Un','vendeur1@devbug.local',5,'Vendeur',49);
+(9,'Gerant','Auto','gerant@zoombox.local',1,'Gérant',1),
+(10,'Vendeur','Un','vendeur1@zoombox.local',1,'Vendeur',1),
+(11,'Gerant','Auto','gerant@edgeblab.local',2,'Gérant',1),
+(12,'Vendeur','Un','vendeur1@edgeblab.local',2,'Vendeur',1),
+(13,'Gerant','Auto','gerant@gabcube.local',3,'Gérant',1),
+(14,'Vendeur','Un','vendeur1@gabcube.local',3,'Vendeur',1),
+(15,'Gerant','Auto','gerant@jazzy.local',4,'Gérant',1),
+(16,'Vendeur','Un','vendeur1@jazzy.local',4,'Vendeur',1),
+(17,'Gerant','Auto','gerant@devbug.local',5,'Gérant',1),
+(18,'Vendeur','Un','vendeur1@devbug.local',5,'Vendeur',1);
 
 --
 -- Structure de la table `tentatives_connexion`
