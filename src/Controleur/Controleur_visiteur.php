@@ -20,6 +20,7 @@ use App\Modele\Modele_FinalitesConsentement;
 use App\Modele\Modele_VersionsPolitique;
 use App\Modele\Modele_Consentements;
 use App\Modele\Modele_HistoriqueConnexion;
+use App\Modele\Modele_Token;
 // (supprimé) use App\Modele\Modele_TentativesConnexion;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -121,6 +122,84 @@ class Controleur_visiteur
             }
 
         }
+        $response->getBody()->write($this->vue->donneStr());
+        return $response;
+    }
+
+    public function reinitmdpconfirmtoken(Request $request, Response $response, array $args): Response
+    {
+        $this->init();
+        if (!isset($_REQUEST["email"]) || !filter_var($_REQUEST["email"], FILTER_VALIDATE_EMAIL)) {
+            $this->vue->addToCorps(new Vue_Mail_ReinitMdp());
+            $this->vue->addToCorps(new Vue_AfficherMessage("<br><label><b>Erreur : Vous devez saisir un mail valide</b></label>"));
+            $response->getBody()->write($this->vue->donneStr());
+            return $response;
+        }
+
+        $utilisateur = Modele_Utilisateur::Utilisateur_Select_ParLogin($_REQUEST["email"]);
+        if ($utilisateur === null) {
+            $this->vue->addToCorps(new Vue_Mail_ReinitMdp());
+            $this->vue->addToCorps(new Vue_AfficherMessage("<br><label><b>Erreur : Aucun utilisateur n'est enregistré avec ce mail</b></label>"));
+            $response->getBody()->write($this->vue->donneStr());
+            return $response;
+        }
+
+        $tokenActif = Modele_Token::Token_SelectActifParUtilisateur((int) $utilisateur["idUtilisateur"], 1);
+        if ($tokenActif !== null) {
+            try {
+                $expirationActive = new \DateTimeImmutable($tokenActif["dateFin"]);
+                $infoExpiration = $expirationActive->format('d/m/Y H:i');
+            } catch (\Exception $e) {
+                $infoExpiration = "bientôt";
+            }
+            $this->vue->addToCorps(new Vue_Mail_ReinitMdp());
+            $this->vue->addToCorps(new Vue_AfficherMessage("<br><label><b>Un lien de réinitialisation a déjà été envoyé. Vérifiez vos e-mails (valide jusqu'au " . $infoExpiration . ").</b></label>"));
+            $response->getBody()->write($this->vue->donneStr());
+            return $response;
+        }
+
+        $now = new \DateTimeImmutable('now');
+        $expiration = $now->add(new \DateInterval('PT1H'));
+        // Supprime les anciens tokens éventuels pour ce compte
+        Modele_Token::Token_SupprimerParUtilisateur((int) $utilisateur["idUtilisateur"], 1);
+
+        $tokenValeur = Modele_Token::CreerToken(1, (int) $utilisateur["idUtilisateur"], $expiration);
+        if ($tokenValeur === false) {
+            $this->vue->addToCorps(new Vue_Mail_ReinitMdp());
+            $this->vue->addToCorps(new Vue_AfficherMessage("<br><label><b>Erreur : Impossible de générer un lien de réinitialisation.</b></label>"));
+            $response->getBody()->write($this->vue->donneStr());
+            return $response;
+        }
+
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+        $basePath = str_replace('\\', '/', dirname($scriptName));
+        if ($basePath === '/' || $basePath === '\\' || $basePath === '.') {
+            $basePath = '';
+        }
+        $url = $scheme . '://' . $host . $basePath . '/reinitmdp/token/' . rawurlencode($tokenValeur);
+
+        $expirationTexte = $expiration->format('d/m/Y H:i');
+        $messageLien = "Vous avez demandé la réinitialisation de votre mot de passe.<br>"
+            . "Cliquez sur le lien suivant (valide jusqu'au " . $expirationTexte . ") : "
+            . "<a href='" . htmlspecialchars($url, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "'>Réinitialiser mon mot de passe</a><br>"
+            . "Si le lien ne fonctionne pas, copiez-collez l'URL suivante dans votre navigateur :<br>" . htmlspecialchars($url, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+        $resultat = envoyerMail("administration@cafe.local", "Administrateur café", $utilisateur["login"], $utilisateur["login"], "Lien de réinitialisation de mot de passe", $messageLien);
+
+        if ($resultat !== 1) {
+            Modele_Token::Token_SupprimerParValeur($tokenValeur);
+            $this->vue->addToCorps(new Vue_Mail_ReinitMdp());
+            $msgErreur = $resultat === -1
+                ? "<br><label><b>Erreur : Le mail n'a pas pu être envoyé, erreurs de paramètres</b></label>"
+                : "<br><label><b>Erreur : Le mail n'a pas pu être envoyé, erreur indéterminée</b></label>";
+            $this->vue->addToCorps(new Vue_AfficherMessage($msgErreur));
+        } else {
+            $this->vue->addToCorps(new Vue_Mail_ReinitMdp());
+            $this->vue->addToCorps(new Vue_AfficherMessage("<br><label><b>Mail envoyé. Le lien de réinitialisation expire le " . $expirationTexte . ".</b></label>"));
+        }
+
         $response->getBody()->write($this->vue->donneStr());
         return $response;
     }

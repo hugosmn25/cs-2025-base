@@ -4,12 +4,13 @@ session_start();
 include_once "../vendor/autoload.php";
 
 use Slim\Factory\AppFactory;
-use App\Modele\Modele_Token;
 use App\Utilitaire\Vue;
 use App\Vue\Vue_AfficherMessage;
 use App\Vue\Vue_Connexion_Formulaire_client;
 use App\Vue\Vue_Menu_Administration;
 use App\Vue\Vue_Structure_Entete;
+use Psr\Http\Message\ServerRequestInterface as Request;
+use Psr\Http\Message\ResponseInterface as Response;
 
 
 //Page appelée pour les utilisateurs publics
@@ -38,6 +39,11 @@ $rgpdController = new \App\Controleur\Controleur_Gerer_Rgpd($Vue, $catalogueClie
 $visiteurController = new \App\Controleur\Controleur_visiteur($Vue, $catalogueClientController, $entrepriseController);
 $admin_RgpdController = new \App\Controleur\Controleur_Admin_Rgpd($Vue);
 
+$app->get('/reinitmdp/token/{token}', [$tokenController, 'default']);
+$app->get('/visiteur/reinitmdp/token/{token}', [$tokenController, 'default']);
+$app->post('/choixmdp', [$tokenController, 'choixmdp']);
+$app->post('/visiteur/choixmdp', [$tokenController, 'choixmdp']);
+
 //Pour éviter d'être bloqué à cause des sesssions, si l'utilisateur retourne à l'URL de connexion, il est déconnecté
 if (isset($_SESSION["idCategorie_utilisateur"])) {
     $typeConnexion = $_SESSION["idCategorie_utilisateur"];
@@ -63,6 +69,8 @@ switch ((int) $typeConnexion) {
         $app->post('/reinitmdpconfirm', [$visiteurController, 'reinitmdpconfirm']);
         $app->get('/visiteur/reinitmdp', [$visiteurController, 'reinitmdp']);
         $app->post('/visiteur/reinitmdpconfirm', [$visiteurController, 'reinitmdpconfirm']);
+        $app->post('/reinitmdptoken', [$visiteurController, 'reinitmdpconfirmtoken']);
+        $app->post('/visiteur/reinitmdptoken', [$visiteurController, 'reinitmdpconfirmtoken']);
         $app->post('/visiteur/submitModifMDPForce', [$visiteurController, 'submitModifMDPForce']);
         $app->get('/visiteur', [$visiteurController, 'default']);
 
