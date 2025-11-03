@@ -93,7 +93,7 @@ class Controleur_visiteur
                         $this->vue->addToCorps(new Vue_Mail_ReinitMdp());
                         $this->vue->addToCorps(new Vue_AfficherMessage("<br><label><b>Erreur : Impossible de préparer la réinitialisation du mot de passe.</b></label>"));
                     } else {
-                        Modele_Utilisateur::Utilisateur_DoitChangerMdp($Utilisateur["idUtilisateur"], 1);
+                        //Modele_Utilisateur::Utilisateur_DoitChangerMdp($Utilisateur["idUtilisateur"], 1);
                         $expirationTexte = $expiration->format('d/m/Y H:i');
                         $messageMail = "Votre mot de passe temporaire est : <b>" . $nouveauMdp . "</b><br>Il expirera le " . $expirationTexte . ".<br>Utilisez-le pour vous connecter puis changez-le dès que possible.";
                         $resultat = envoyerMail("administration@cafe.local", "Administrateur café", $Utilisateur["login"], $Utilisateur["login"], "Réinitialisation de votre mot de passe", $messageMail);
