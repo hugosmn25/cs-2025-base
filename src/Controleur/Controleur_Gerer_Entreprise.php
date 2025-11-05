@@ -5,6 +5,7 @@ namespace App\Controleur;
 use App\Modele\Modele_Entreprise;
 use App\Modele\Modele_FacteurAuthentification;
 use App\Modele\Modele_Salarie;
+use App\Vue\Vue_Compte_Administration_DeuxiemeFacteur;
 use App\Vue\Vue_Utilisateur_Changement_MDP;
 use App\Vue\Vue_Connexion_Formulaire_client;
 use App\Vue\Vue_Menu_Entreprise_Client;
@@ -35,6 +36,11 @@ class Controleur_Gerer_Entreprise
 
     private function ajouterVueGestionCompte(string $message = ""): void
     {
+        $this->vue->addToCorps(new Vue_Entreprise_Gerer_Compte($message));
+    }
+
+    private function ajouterVueDeuxiemeFacteur(string $message = ""): void
+    {
         $facteurs = Modele_FacteurAuthentification::Facteur_SelectTout();
         $facteurSelectionne = null;
         if (isset($_SESSION["idUtilisateur"])) {
@@ -44,7 +50,7 @@ class Controleur_Gerer_Entreprise
             }
         }
 
-        $this->vue->addToCorps(new Vue_Entreprise_Gerer_Compte($message, $facteurs, $facteurSelectionne));
+        $this->vue->addToCorps(new Vue_Compte_Administration_DeuxiemeFacteur($facteurs, $facteurSelectionne, $message, "Gerer_Entreprise", "Configurer le deuxieme facteur"));
     }
 
     public function infoEntreprise(Request $request, Response $response, array $args): Response
@@ -82,6 +88,17 @@ class Controleur_Gerer_Entreprise
         $this->vue->setEntete(new Vue_Structure_Entete());
         $this->vue->setMenu(new Vue_Menu_Entreprise_Client());
         $this->vue->addToCorps(new Vue_Salarie_Editer());
+        $this->vue->setBasDePage(new Vue_Structure_BasDePage());
+        $response->getBody()->write($this->vue->donneStr());
+        return $response;
+    }
+
+    public function gerer2FA(Request $request, Response $response, array $args): Response
+    {
+        $this->init();
+        $this->vue->setEntete(new Vue_Structure_Entete());
+        $this->vue->setMenu(new Vue_Menu_Entreprise_Client());
+        $this->ajouterVueDeuxiemeFacteur();
         $this->vue->setBasDePage(new Vue_Structure_BasDePage());
         $response->getBody()->write($this->vue->donneStr());
         return $response;
@@ -211,7 +228,24 @@ class Controleur_Gerer_Entreprise
             }
         }
 
-        $this->ajouterVueGestionCompte($message);
+        $this->ajouterVueDeuxiemeFacteur($message);
+        $this->vue->setBasDePage(new Vue_Structure_BasDePage());
+        $response->getBody()->write($this->vue->donneStr());
+        return $response;
+    }
+
+    public function supprimer2FA(Request $request, Response $response, array $args): Response
+    {
+        $this->init();
+        $this->vue->setEntete(new Vue_Structure_Entete());
+        $this->vue->setMenu(new Vue_Menu_Entreprise_Client());
+
+        $succes = Modele_FacteurAuthentification::Avoir2FA_SupprimerPourUtilisateur((int) $_SESSION["idUtilisateur"]);
+        $message = $succes
+            ? "<label><b>Votre deuxieme facteur d'authentification a ete supprime.</b></label>"
+            : "<label><b>Erreur lors de la suppression du deuxieme facteur.</b></label>";
+
+        $this->ajouterVueDeuxiemeFacteur($message);
         $this->vue->setBasDePage(new Vue_Structure_BasDePage());
         $response->getBody()->write($this->vue->donneStr());
         return $response;

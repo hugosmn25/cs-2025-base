@@ -72,6 +72,7 @@ switch ((int) $typeConnexion) {
         $app->post('/reinitmdptoken', [$visiteurController, 'reinitmdpconfirmtoken']);
         $app->post('/visiteur/reinitmdptoken', [$visiteurController, 'reinitmdpconfirmtoken']);
         $app->post('/visiteur/submitModifMDPForce', [$visiteurController, 'submitModifMDPForce']);
+        $app->post('/visiteur/verifier2FA', [$visiteurController, 'verifier2FA']);
         $app->get('/visiteur', [$visiteurController, 'default']);
 
         break;
@@ -125,8 +126,10 @@ switch ((int) $typeConnexion) {
         $app->get('/Gerer_catalogue/okRechercher', [$catalogueBackController, 'okRechercher']);
         $app->get('/Gerer_monCompte', [$monCompteBackController, 'default']);
         $app->get('/Gerer_monCompte/changerMDP', [$monCompteBackController, 'changerMDP']);
+        $app->get('/Gerer_monCompte/gerer2FA', [$monCompteBackController, 'gerer2FA']);
         $app->post('/Gerer_monCompte/submitModifMDP', [$monCompteBackController, 'submitModifMDP']);
         $app->post('/Gerer_monCompte/definir2FA', [$monCompteBackController, 'definir2FA']);
+        $app->post('/Gerer_monCompte/supprimer2FA', [$monCompteBackController, 'supprimer2FA']);
         $app->get('/Gerer_monCompte/SeDeconnecter', [$monCompteBackController, 'SeDeconnecter']);
         $app->post('/visiteur/SeConnecter', [$visiteurController, 'SeConnecter']);
         $app->post('/SeConnecter', [$visiteurController, 'SeConnecter']);
@@ -154,8 +157,10 @@ switch ((int) $typeConnexion) {
 
         $app->get('/Gerer_monCompte', [$monCompteBackController, 'default']);
         $app->get('/Gerer_monCompte/changerMDP', [$monCompteBackController, 'changerMDP']);
+        $app->get('/Gerer_monCompte/gerer2FA', [$monCompteBackController, 'gerer2FA']);
         $app->post('/Gerer_monCompte/submitModifMDP', [$monCompteBackController, 'submitModifMDP']);
         $app->post('/Gerer_monCompte/definir2FA', [$monCompteBackController, 'definir2FA']);
+        $app->post('/Gerer_monCompte/supprimer2FA', [$monCompteBackController, 'supprimer2FA']);
         $app->get('/Gerer_monCompte/SeDeconnecter', [$monCompteBackController, 'SeDeconnecter']);
 
         $app->post('/visiteur/submitModifMDPForce', [$visiteurController, 'submitModifMDPForce']);
@@ -183,8 +188,10 @@ switch ((int) $typeConnexion) {
         $app->get('/Gerer_Panier/validerPanier', [$panierController, 'validerPanier']);
         $app->get('/Gerer_MonCompte_Salarie', [$monCompteSalarieController, 'default']);
         $app->get('/Gerer_MonCompte_Salarie/changerMDP', [$monCompteSalarieController, 'changerMDP']);
+        $app->get('/Gerer_MonCompte_Salarie/gerer2FA', [$monCompteSalarieController, 'gerer2FA']);
         $app->post('/Gerer_MonCompte_Salarie/submitModifMDP', [$monCompteSalarieController, 'submitModifMDP']);
         $app->post('/Gerer_MonCompte_Salarie/definir2FA', [$monCompteSalarieController, 'definir2FA']);
+        $app->post('/Gerer_MonCompte_Salarie/supprimer2FA', [$monCompteSalarieController, 'supprimer2FA']);
         $app->get('/Gerer_MonCompte_Salarie/SeDeconnecter', [$monCompteSalarieController, 'SeDeconnecter']);
         $app->get('/Gerer_Entreprise', [$entrepriseController, 'default']);
         $app->get('/Gerer_Entreprise/infoEntreprise', [$entrepriseController, 'infoEntreprise']);
@@ -197,8 +204,10 @@ switch ((int) $typeConnexion) {
         $app->post('/Gerer_Entreprise/ActiverSalarie', [$entrepriseController, 'ActiverSalarie']);
         $app->post('/Gerer_Entreprise/submitModifMDP', [$entrepriseController, 'submitModifMDP']);
         $app->post('/Gerer_Entreprise/definir2FA', [$entrepriseController, 'definir2FA']);
+        $app->post('/Gerer_Entreprise/supprimer2FA', [$entrepriseController, 'supprimer2FA']);
 
         $app->get('/Gerer_Entreprise/ChangerMDPEntreprise', [$entrepriseController, 'ChangerMDPEntreprise']);
+        $app->get('/Gerer_Entreprise/gerer2FA', [$entrepriseController, 'gerer2FA']);
         $app->get('/Gerer_Entreprise/deconnexionEntreprise', [$entrepriseController, 'deconnexionEntreprise']);
         $app->get('/Gerer_monCompte/deconnexionEntreprise', [$entrepriseController, 'deconnexionEntreprise']);
 
@@ -218,5 +227,7 @@ switch ((int) $typeConnexion) {
     default:
 }
 $app->run();
+
+
 
 

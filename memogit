@@ -15,4 +15,6 @@ rechanger le dépot
 git remote set-url CS_2025_base https://github.com/jeanbaptisteaubry/CS_2025_base.git
 
 git push -u CS_2025_base 3-Advanced-RGPD-Correction
- 
+
+forcer la version d'une branche en ligne
+git reset --hard CS_2025_base/5-Mot-de-passe-mail-changer-correction

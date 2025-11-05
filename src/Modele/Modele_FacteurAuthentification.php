@@ -67,11 +67,9 @@ class Modele_FacteurAuthentification
         $connexionPDO->beginTransaction();
 
         try {
-            $requeteSuppression = $connexionPDO->prepare('
-                DELETE FROM Avoir2FA
-                WHERE idUtilisateur = :idUtilisateur');
-            $requeteSuppression->bindParam('idUtilisateur', $idUtilisateur, PDO::PARAM_INT);
-            $requeteSuppression->execute();
+            if (!self::Avoir2FA_SupprimerPourUtilisateur($idUtilisateur)) {
+                throw new \RuntimeException('Suppression 2FA existant impossible');
+            }
 
             $requeteInsertion = $connexionPDO->prepare('
                 INSERT INTO Avoir2FA (idUtilisateur, idFacteurAuthentification, valeur)
@@ -87,5 +85,27 @@ class Modele_FacteurAuthentification
             $connexionPDO->rollBack();
             return false;
         }
+    }
+
+    public static function Avoir2FA_SupprimerPourUtilisateur(int $idUtilisateur): bool
+    {
+        $connexionPDO = Singleton_ConnexionPDO::getInstance();
+        $requeteSuppression = $connexionPDO->prepare('
+            DELETE FROM Avoir2FA
+            WHERE idUtilisateur = :idUtilisateur');
+        $requeteSuppression->bindParam('idUtilisateur', $idUtilisateur, PDO::PARAM_INT);
+        return $requeteSuppression->execute();
+    }
+
+    public static function Avoir2FA_MettreAJourValeur(int $idUtilisateur, string $valeur): bool
+    {
+        $connexionPDO = Singleton_ConnexionPDO::getInstance();
+        $requete = $connexionPDO->prepare('
+            UPDATE Avoir2FA
+            SET valeur = :valeur
+            WHERE idUtilisateur = :idUtilisateur');
+        $requete->bindParam('valeur', $valeur, PDO::PARAM_STR);
+        $requete->bindParam('idUtilisateur', $idUtilisateur, PDO::PARAM_INT);
+        return $requete->execute();
     }
 }
