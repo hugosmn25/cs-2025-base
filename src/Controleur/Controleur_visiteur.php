@@ -363,6 +363,8 @@ class Controleur_visiteur
                     }
 
                     if ($motDePasseValide) {
+                        Modele_Utilisateur::Utilisateur_SupprimerMotDePasseTemporaire($utilisateur["idUtilisateur"]);
+                         
                         $_SESSION["idUtilisateur"] = $utilisateur["idUtilisateur"];
                         $_SESSION["idCategorie_utilisateur"] = $utilisateur["idCategorie_utilisateur"];
                         // Enregistre succès
