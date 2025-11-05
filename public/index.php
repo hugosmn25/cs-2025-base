@@ -126,6 +126,7 @@ switch ((int) $typeConnexion) {
         $app->get('/Gerer_monCompte', [$monCompteBackController, 'default']);
         $app->get('/Gerer_monCompte/changerMDP', [$monCompteBackController, 'changerMDP']);
         $app->post('/Gerer_monCompte/submitModifMDP', [$monCompteBackController, 'submitModifMDP']);
+        $app->post('/Gerer_monCompte/definir2FA', [$monCompteBackController, 'definir2FA']);
         $app->get('/Gerer_monCompte/SeDeconnecter', [$monCompteBackController, 'SeDeconnecter']);
         $app->post('/visiteur/SeConnecter', [$visiteurController, 'SeConnecter']);
         $app->post('/SeConnecter', [$visiteurController, 'SeConnecter']);
@@ -154,6 +155,7 @@ switch ((int) $typeConnexion) {
         $app->get('/Gerer_monCompte', [$monCompteBackController, 'default']);
         $app->get('/Gerer_monCompte/changerMDP', [$monCompteBackController, 'changerMDP']);
         $app->post('/Gerer_monCompte/submitModifMDP', [$monCompteBackController, 'submitModifMDP']);
+        $app->post('/Gerer_monCompte/definir2FA', [$monCompteBackController, 'definir2FA']);
         $app->get('/Gerer_monCompte/SeDeconnecter', [$monCompteBackController, 'SeDeconnecter']);
 
         $app->post('/visiteur/submitModifMDPForce', [$visiteurController, 'submitModifMDPForce']);
@@ -182,6 +184,7 @@ switch ((int) $typeConnexion) {
         $app->get('/Gerer_MonCompte_Salarie', [$monCompteSalarieController, 'default']);
         $app->get('/Gerer_MonCompte_Salarie/changerMDP', [$monCompteSalarieController, 'changerMDP']);
         $app->post('/Gerer_MonCompte_Salarie/submitModifMDP', [$monCompteSalarieController, 'submitModifMDP']);
+        $app->post('/Gerer_MonCompte_Salarie/definir2FA', [$monCompteSalarieController, 'definir2FA']);
         $app->get('/Gerer_MonCompte_Salarie/SeDeconnecter', [$monCompteSalarieController, 'SeDeconnecter']);
         $app->get('/Gerer_Entreprise', [$entrepriseController, 'default']);
         $app->get('/Gerer_Entreprise/infoEntreprise', [$entrepriseController, 'infoEntreprise']);
@@ -193,6 +196,7 @@ switch ((int) $typeConnexion) {
         $app->post('/Gerer_Entreprise/DesactiverSalarie', [$entrepriseController, 'DesactiverSalarie']);
         $app->post('/Gerer_Entreprise/ActiverSalarie', [$entrepriseController, 'ActiverSalarie']);
         $app->post('/Gerer_Entreprise/submitModifMDP', [$entrepriseController, 'submitModifMDP']);
+        $app->post('/Gerer_Entreprise/definir2FA', [$entrepriseController, 'definir2FA']);
 
         $app->get('/Gerer_Entreprise/ChangerMDPEntreprise', [$entrepriseController, 'ChangerMDPEntreprise']);
         $app->get('/Gerer_Entreprise/deconnexionEntreprise', [$entrepriseController, 'deconnexionEntreprise']);

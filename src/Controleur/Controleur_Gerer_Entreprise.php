@@ -3,6 +3,7 @@
 namespace App\Controleur;
 
 use App\Modele\Modele_Entreprise;
+use App\Modele\Modele_FacteurAuthentification;
 use App\Modele\Modele_Salarie;
 use App\Vue\Vue_Utilisateur_Changement_MDP;
 use App\Vue\Vue_Connexion_Formulaire_client;
@@ -30,6 +31,20 @@ class Controleur_Gerer_Entreprise
     public function init(): void
     {
         // Aucun code avant le switch dans la version initiale
+    }
+
+    private function ajouterVueGestionCompte(string $message = ""): void
+    {
+        $facteurs = Modele_FacteurAuthentification::Facteur_SelectTout();
+        $facteurSelectionne = null;
+        if (isset($_SESSION["idUtilisateur"])) {
+            $selection = Modele_FacteurAuthentification::Avoir2FA_SelectParUtilisateur((int) $_SESSION["idUtilisateur"]);
+            if ($selection !== null && isset($selection["idFacteurAuthentification"])) {
+                $facteurSelectionne = (int) $selection["idFacteurAuthentification"];
+            }
+        }
+
+        $this->vue->addToCorps(new Vue_Entreprise_Gerer_Compte($message, $facteurs, $facteurSelectionne));
     }
 
     public function infoEntreprise(Request $request, Response $response, array $args): Response
@@ -160,7 +175,8 @@ class Controleur_Gerer_Entreprise
                     return $response;
                 }
                 Modele_Entreprise::Entreprise_Modifier_motDePasse($_SESSION["idEntreprise"], $_REQUEST["NouveauPassword"]);
-                $this->vue->addToCorps(new Vue_Entreprise_Gerer_Compte("<label><b>Votre mot de passe a bien été modifié</b></label>"));
+                $this->ajouterVueGestionCompte("<label><b>Votre mot de passe a bien été modifié</b></label>");
+                $this->vue->setBasDePage(new Vue_Structure_BasDePage());
                 // Dans ce cas les mots de passe sont bons, il est donc modifié
 
             } else {
@@ -171,6 +187,32 @@ class Controleur_Gerer_Entreprise
             $this->vue->addToCorps(new Vue_Utilisateur_Changement_MDP("<label><b>Vous n'avez pas saisi le bon mot de passe</b></label>"));
 
         }
+        $response->getBody()->write($this->vue->donneStr());
+        return $response;
+    }
+
+    public function definir2FA(Request $request, Response $response, array $args): Response
+    {
+        $this->init();
+        $this->vue->setEntete(new Vue_Structure_Entete());
+        $this->vue->setMenu(new Vue_Menu_Entreprise_Client());
+
+        $message = "<label><b>Erreur : sélection invalide.</b></label>";
+        $idFacteur = filter_input(INPUT_POST, 'idFacteurAuthentification', FILTER_VALIDATE_INT);
+        if ($idFacteur !== false && $idFacteur !== null) {
+            $facteur = Modele_FacteurAuthentification::Facteur_SelectParId($idFacteur);
+            if ($facteur === null) {
+                $message = "<label><b>Erreur : facteur d'authentification introuvable.</b></label>";
+            } else {
+                $succes = Modele_FacteurAuthentification::Avoir2FA_DefinirPourUtilisateur((int) $_SESSION["idUtilisateur"], $idFacteur);
+                $message = $succes
+                    ? "<label><b>Votre deuxième facteur d'authentification a été enregistré.</b></label>"
+                    : "<label><b>Erreur lors de l'enregistrement du deuxième facteur.</b></label>";
+            }
+        }
+
+        $this->ajouterVueGestionCompte($message);
+        $this->vue->setBasDePage(new Vue_Structure_BasDePage());
         $response->getBody()->write($this->vue->donneStr());
         return $response;
     }
@@ -203,7 +245,7 @@ class Controleur_Gerer_Entreprise
         $this->init();
         $this->vue->setEntete(new Vue_Structure_Entete());
         $this->vue->setMenu(new Vue_Menu_Entreprise_Client());
-        $this->vue->addToCorps(new Vue_Entreprise_Gerer_Compte());
+        $this->ajouterVueGestionCompte();
         $this->vue->setBasDePage(new Vue_Structure_BasDePage());
         $response->getBody()->write($this->vue->donneStr());
         return $response;
