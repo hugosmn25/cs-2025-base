@@ -10,3 +10,9 @@ git branch -r
 
 Récupérer en local une branche distante
 git checkout -b 3-Advanced-RGPD-Correction CS_2025_base/3-Advanced-RGPD-Correction
+
+rechanger le dépot 
+git remote set-url CS_2025_base https://github.com/jeanbaptisteaubry/CS_2025_base.git
+
+git push -u CS_2025_base 3-Advanced-RGPD-Correction
+ 
