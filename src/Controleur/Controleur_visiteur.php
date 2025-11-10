@@ -51,6 +51,7 @@ class Controleur_visiteur
     }
 
     /**
+     * Fonction finalisant la connexion d'un utilisateur après authentification réussie
      * @param array<string, mixed> $utilisateur
      */
     private function finaliserConnexion(array $utilisateur, Request $request, Response $response, array $args): Response
@@ -360,11 +361,15 @@ class Controleur_visiteur
             session_destroy();
             unset($_SESSION);
         }
+
         if (isset($_REQUEST["compte"]) and isset($_REQUEST["password"])) {
+            //L'utilisateur a soumis le formulaire de connexion,
+            //on reste les 2FA en attente
             if (isset($_SESSION["2fa_pending"])) {
                 unset($_SESSION["2fa_pending"]);
             }
             $loginSaisi = $_REQUEST["compte"];
+
             // Anti-bruteforce: 5 tentatives erronées -> blocage 2 minutes
             $nbEchecsRecents = Modele_HistoriqueConnexion::HistoriqueConnexion_NombreEchecsRecents($loginSaisi, 120);
             if ($nbEchecsRecents >= 5) {
@@ -395,6 +400,9 @@ class Controleur_visiteur
 
             if ($utilisateur != null) {
                 if ($utilisateur["desactiver"] == 0) {
+
+                    //2 hypothèses pour la validité du mot de passe: 
+                    // mot de passe normal ou mot de passe temporaire valide
                     $motDePasseSaisi = $_REQUEST["password"];
                     $motDePasseValide = false;
                     $motDePasseTemporaireValide = false;
@@ -404,6 +412,7 @@ class Controleur_visiteur
                     $motDePasseTemporaireEnCours = $motDePasseTemporaireInitial;
                     $expirationTemporaireEnCours = $utilisateur["expirationMotDePasseTemporaire"] ?? null;
                     $dateExpirationTemporaire = null;
+                    //Vérification si mot de passe temporaire encore valide
                     if (!empty($motDePasseTemporaireEnCours) && !empty($expirationTemporaireEnCours)) {
                         try {
                             $dateExpirationTemporaire = new \DateTimeImmutable($expirationTemporaireEnCours);
@@ -419,6 +428,7 @@ class Controleur_visiteur
                         }
                     }
 
+                    //Vérification si mot de passe normal correct
                     if ($motDePasseSaisi === $utilisateur["motDePasse"]) {
                         $motDePasseValide = true;
                     } elseif ($motDePasseTemporaireValide && $motDePasseSaisi === $motDePasseTemporaireEnCours) {
@@ -430,35 +440,42 @@ class Controleur_visiteur
                         $motDePasseTemporaireExpireSaisi = true;
                     }
 
+                    //Si un des 2 mots de passe est valide, on connecte l'utilisateur
                     if ($motDePasseValide) {
                         Modele_Utilisateur::Utilisateur_SupprimerMotDePasseTemporaire($utilisateur["idUtilisateur"]);
 
                         $facteurActif = Modele_FacteurAuthentification::Avoir2FA_SelectParUtilisateur((int) $utilisateur["idUtilisateur"]);
                         if ($facteurActif !== null) {
                             $facteurId = (int) $facteurActif["idFacteurAuthentification"];
-                            if ($facteurId === 1) {
-                                $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-                                $miseAJour = Modele_FacteurAuthentification::Avoir2FA_MettreAJourValeur((int) $utilisateur["idUtilisateur"], $code);
-                                if (!$miseAJour) {
-                                    $this->vue->addToCorps(new Vue_Connexion_Formulaire_client("Erreur lors de la generation du code 2FA. Veuillez reessayer."));
-                                } else {
-                                    $messageMail = "<p>Bonjour,</p><p>Votre code de verification est : <strong>" . $code . "</strong>.</p><p>Ce code est valide pour une seule connexion.</p>";
-                                    $resultatMail = envoyerMail("administration@cafe.local", "Administrateur cafe", $utilisateur["login"], $utilisateur["login"], "Code de verification", $messageMail);
-                                    if ($resultatMail !== 1) {
-                                        Modele_FacteurAuthentification::Avoir2FA_MettreAJourValeur((int) $utilisateur["idUtilisateur"], '');
-                                        $this->vue->addToCorps(new Vue_Connexion_Formulaire_client("Impossible d'envoyer le code 2FA par mail. Veuillez reessayer."));
+                            switch ($facteurId) {
+                                case 1: // Mail
+                                    $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+                                    $miseAJour = Modele_FacteurAuthentification::Avoir2FA_MettreAJourValeur((int) $utilisateur["idUtilisateur"], $code);
+                                    if (!$miseAJour) {
+                                        $this->vue->addToCorps(new Vue_Connexion_Formulaire_client("Erreur lors de la generation du code 2FA. Veuillez reessayer."));
                                     } else {
-                                        $_SESSION["2fa_pending"] = [
-                                            "idUtilisateur" => (int) $utilisateur["idUtilisateur"],
-                                            "idCategorie_utilisateur" => (int) $utilisateur["idCategorie_utilisateur"],
-                                            "facteur" => $facteurId,
-                                            "login" => $utilisateur["login"],
-                                        ];
-                                        $this->vue->addToCorps(new Vue_Connexion_Second_Facteur($utilisateur["login"]));
+                                        $messageMail = "<p>Bonjour,</p><p>Votre code de verification est : <strong>" . $code . "</strong>.</p><p>Ce code est valide pour une seule connexion.</p>";
+                                        $resultatMail = envoyerMail("administration@cafe.local", "Administrateur cafe", $utilisateur["login"], $utilisateur["login"], "Code de verification", $messageMail);
+                                        if ($resultatMail !== 1) {
+                                            Modele_FacteurAuthentification::Avoir2FA_MettreAJourValeur((int) $utilisateur["idUtilisateur"], '');
+                                            $this->vue->addToCorps(new Vue_Connexion_Formulaire_client("Impossible d'envoyer le code 2FA par mail. Veuillez reessayer."));
+                                        } else {
+                                            $_SESSION["2fa_pending"] = [
+                                                "idUtilisateur" => (int) $utilisateur["idUtilisateur"],
+                                                "idCategorie_utilisateur" => (int) $utilisateur["idCategorie_utilisateur"],
+                                                "facteur" => $facteurId,
+                                                "login" => $utilisateur["login"],
+                                            ];
+                                            $this->vue->addToCorps(new Vue_Connexion_Second_Facteur($utilisateur["login"]));
+                                        }
                                     }
-                                }
-                            } else {
-                                $this->vue->addToCorps(new Vue_Connexion_Formulaire_client("Ce type de deuxieme facteur n'est pas encore supporte."));
+                                    break;
+                                case 2:// Application d'authentification (non implémenté)
+                                    $this->vue->addToCorps(new Vue_Connexion_Formulaire_client("L'authentification via application n'est pas encore implémentée."));
+                                    break;
+                                default:
+                                    $this->vue->addToCorps(new Vue_Connexion_Formulaire_client("Type de deuxieme facteur inconnu."));
+                                    break;
                             }
                             $response->getBody()->write($this->vue->donneStr());
                             return $response;
@@ -510,12 +527,14 @@ class Controleur_visiteur
     {
         $this->init();
         $attente = $_SESSION["2fa_pending"] ?? null;
+        //Si on a un 2FA en attente pour cette session
         if (!is_array($attente)) {
             $this->vue->addToCorps(new Vue_Connexion_Formulaire_client("Session 2FA expiree. Veuillez vous reconnecter."));
             $response->getBody()->write($this->vue->donneStr());
             return $response;
         }
 
+        //Vérification de saisie du code
         $codeSaisi = trim((string) ($_REQUEST["code2FA"] ?? ""));
         if ($codeSaisi === "" || !preg_match('/^[0-9]{6}$/', $codeSaisi)) {
             $this->vue->addToCorps(new Vue_Connexion_Second_Facteur($attente["login"] ?? "", "Le code doit contenir 6 chiffres."));
@@ -523,6 +542,7 @@ class Controleur_visiteur
             return $response;
         }
 
+        //On vérifie la validité du code
         $enregistrement = Modele_FacteurAuthentification::Avoir2FA_SelectParUtilisateur((int) $attente["idUtilisateur"]);
         if ($enregistrement === null || (int) $enregistrement["idFacteurAuthentification"] !== (int) $attente["facteur"]) {
             unset($_SESSION["2fa_pending"]);
@@ -531,6 +551,7 @@ class Controleur_visiteur
             return $response;
         }
 
+        //On vérifie si le code est le bon
         if ($codeSaisi !== (string) ($enregistrement["valeur"] ?? "")) {
             $ip = $_SERVER['REMOTE_ADDR'] ?? null;
             $ua = $_SERVER['HTTP_USER_AGENT'] ?? null;
@@ -540,10 +561,12 @@ class Controleur_visiteur
             return $response;
         }
 
+        //Code correct, on finalise la connexion
         Modele_FacteurAuthentification::Avoir2FA_MettreAJourValeur((int) $attente["idUtilisateur"], '');
         $utilisateur = Modele_Utilisateur::Utilisateur_Select_ParId((int) $attente["idUtilisateur"]);
         unset($_SESSION["2fa_pending"]);
 
+        //Si l'utilisateur n'existe plus
         if ($utilisateur === false || $utilisateur === null) {
             $this->vue->addToCorps(new Vue_Connexion_Formulaire_client("Utilisateur introuvable. Veuillez recommencer la connexion."));
             $response->getBody()->write($this->vue->donneStr());
