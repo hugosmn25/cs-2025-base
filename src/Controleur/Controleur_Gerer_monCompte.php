@@ -15,6 +15,9 @@ use App\Utilitaire\Vue;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use function App\Fonctions\CalculComplexiteMdp;
+use OTPHP\TOTP;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\PngWriter;
 
 class Controleur_Gerer_monCompte
 {
@@ -117,9 +120,36 @@ class Controleur_Gerer_monCompte
                 $message = "<label><b>Erreur : facteur d'authentification introuvable.</b></label>";
             } else {
                 $succes = Modele_FacteurAuthentification::Avoir2FA_DefinirPourUtilisateur((int) $_SESSION["idUtilisateur"], $idFacteur);
-                $message = $succes
-                    ? "<label><b>Votre deuxième facteur d'authentification a été enregistré.</b></label>"
-                    : "<label><b>Erreur lors de l'enregistrement du deuxième facteur.</b></label>";
+
+                if ($succes) {
+                    $message = "<label><b>Votre deuxième facteur d'authentification a été enregistré...</b></label>".$facteur["libelle"];
+
+                    switch ($facteur["libelle"]) {
+                        case "Mail":
+                            // Envoyer un email de confirmation (simulation)
+                            // Dans une vraie application, on enverrait un email ici
+                            break;
+                        case "OTP":
+                            $utilisateur = Modele_Utilisateur::Utilisateur_Select_ParId((int) $_SESSION["idUtilisateur"]);
+
+                            $totp = TOTP::create();
+                            $totp->setLabel("Cafe.local" . $utilisateur["login"]);
+                            $totp->setIssuer("Cafe.local");
+                            $uri = $totp->getProvisioningUri();
+
+                            ob_start();
+                            QRcode::png($uri, null, QR_ECLEVEL_M, 4, 2);
+                            $imageData = ob_get_clean();
+
+                            $base64 = base64_encode($imageData);
+
+                            $message.= '<h2>Scanne ce QR Code :</h2>';
+                            $message.= '<img src="data:image/png;base64,' . $base64 . '">';
+
+                            break;
+                    }
+                } else
+                    $message = "<label><b>Erreur lors de l'enregistrement du deuxième facteur.</b></label>";
             }
         }
 

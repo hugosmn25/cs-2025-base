@@ -5,6 +5,7 @@ namespace App\Controleur;
 use App\Modele\Modele_Entreprise;
 use App\Modele\Modele_FacteurAuthentification;
 use App\Modele\Modele_Salarie;
+use App\Modele\Modele_Utilisateur;
 use App\Vue\Vue_Compte_Administration_DeuxiemeFacteur;
 use App\Vue\Vue_Utilisateur_Changement_MDP;
 use App\Vue\Vue_Connexion_Formulaire_client;
@@ -19,6 +20,9 @@ use App\Utilitaire\Vue;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
 use function App\Fonctions\CalculComplexiteMdp;
+use OTPHP\TOTP;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\PngWriter;
 
 class Controleur_Gerer_Entreprise
 {
@@ -60,8 +64,19 @@ class Controleur_Gerer_Entreprise
         $this->vue->addToCorps(new Vue_Menu_Entreprise_Client());
 
         $entreprise = Modele_Entreprise::Entreprise_Select_ParId($_SESSION["idEntreprise"]);
-        $this->vue->addToCorps(new Vue_Entreprise_Information($entreprise["idEntreprise"], $entreprise["denomination"], $entreprise["rueAdresse"], $entreprise["complementAdresse"], $entreprise["codePostal"]
-            , $entreprise["ville"], $entreprise["pays"], $entreprise["numCompte"], $entreprise["mailContact"], $entreprise["siret"]));
+        $this->vue->addToCorps(new Vue_Entreprise_Information(
+            $entreprise["idEntreprise"],
+            $entreprise["denomination"],
+            $entreprise["rueAdresse"],
+            $entreprise["complementAdresse"],
+            $entreprise["codePostal"]
+            ,
+            $entreprise["ville"],
+            $entreprise["pays"],
+            $entreprise["numCompte"],
+            $entreprise["mailContact"],
+            $entreprise["siret"]
+        ));
 
 
         $this->vue->setBasDePage(new Vue_Structure_BasDePage());
@@ -109,8 +124,14 @@ class Controleur_Gerer_Entreprise
         $this->init();
         $this->vue->setEntete(new Vue_Structure_Entete());
         $this->vue->setMenu(new Vue_Menu_Entreprise_Client());
-        Modele_Salarie::Salarie_Ajouter($_REQUEST["nom"], $_REQUEST["prenom"], $_REQUEST["role"], $_REQUEST["mailContact"],  1, 
-        (int)$_SESSION["idEntreprise"]);
+        Modele_Salarie::Salarie_Ajouter(
+            $_REQUEST["nom"],
+            $_REQUEST["prenom"],
+            $_REQUEST["role"],
+            $_REQUEST["mailContact"],
+            1,
+            (int) $_SESSION["idEntreprise"]
+        );
         $listeSalarie = Modele_Salarie::Salarie_Select_Entreprise($_SESSION["idEntreprise"]);
         $this->vue->addToCorps(new Vue_Salarie_Liste($listeSalarie));
         $this->vue->setBasDePage(new Vue_Structure_BasDePage());
@@ -138,7 +159,7 @@ class Controleur_Gerer_Entreprise
         $this->vue->setEntete(new Vue_Structure_Entete());
         $this->vue->setMenu(new Vue_Menu_Entreprise_Client());
 
-        Modele_Salarie::Salarie_MAJ($_REQUEST["nom"], $_REQUEST["prenom"], $_REQUEST["role"], $_REQUEST["mailContact"], $idSalarie );
+        Modele_Salarie::Salarie_MAJ($_REQUEST["nom"], $_REQUEST["prenom"], $_REQUEST["role"], $_REQUEST["mailContact"], $idSalarie);
         $listeSalarie = Modele_Salarie::Salarie_Select_Entreprise($_SESSION["idEntreprise"]);
         $this->vue->addToCorps(new Vue_Salarie_Liste($listeSalarie, "<br>Salarié modifié"));
         $this->vue->setBasDePage(new Vue_Structure_BasDePage());
@@ -222,6 +243,32 @@ class Controleur_Gerer_Entreprise
                 $message = "<label><b>Erreur : facteur d'authentification introuvable.</b></label>";
             } else {
                 $succes = Modele_FacteurAuthentification::Avoir2FA_DefinirPourUtilisateur((int) $_SESSION["idUtilisateur"], $idFacteur);
+                switch ($facteur["nomFacteur"]) {
+                    case "Mail":
+                        // Envoyer un email de confirmation (simulation)
+                        // Dans une vraie application, on enverrait un email ici
+                        break;
+                    case "OTP":
+                        $utilisateur = Modele_Utilisateur::Utilisateur_Select_ParId((int) $_SESSION["idUtilisateur"]);
+
+                        $totp = TOTP::create();
+                        $totp->setLabel("Cafe.local:" . $utilisateur["login"]);
+                        $totp->setIssuer("Cafe.local");
+                        $uri = $totp->getProvisioningUri();
+
+                        ob_start();
+                        QRcode::png($uri, null, QR_ECLEVEL_M, 4, 2);
+                        $imageData = ob_get_clean();
+
+                        $base64 = base64_encode($imageData);
+
+                        echo '<h2>Scanne ce QR Code :</h2>';
+                        echo '<img src="data:image/png;base64,' . $base64 . '">';
+
+                        break;
+                    // Ajouter d'autres cas pour d'autres types de facteurs si nécessaire
+                }
+
                 $message = $succes
                     ? "<label><b>Votre deuxième facteur d'authentification a été enregistré.</b></label>"
                     : "<label><b>Erreur lors de l'enregistrement du deuxième facteur.</b></label>";

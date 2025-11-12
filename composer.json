@@ -16,7 +16,9 @@
     "ext-pdo": "*",
     "phpmailer/phpmailer": "*",
     "slim/slim": "*",
-    "slim/psr7": "^1.7"
+    "slim/psr7": "^1.7",
+    "spomky-labs/otphp" : "*",
+    "endroid/qr-code": "*"
   },
   "autoload": {
     "files": [
