@@ -1424,4 +1424,6 @@ INSERT INTO `FacteurAuthentification` (`id`, `libelle`) VALUES
 (1, 'Mail'),
 (2, 'OTP');
 
+ALTER TABLE `Avoir2FA` ADD PRIMARY KEY(`idUtilisateur`);
+
 SET FOREIGN_KEY_CHECKS=1;

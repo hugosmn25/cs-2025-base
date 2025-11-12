@@ -29,6 +29,8 @@ use Psr\Http\Message\ResponseInterface as Response;
 use function App\Fonctions\CalculComplexiteMdp;
 use function App\Fonctions\envoyerMail;
 use function App\Fonctions\genereMDP;
+use OTPHP\TOTP;
+
 class Controleur_visiteur
 {
     private Vue $vue;
@@ -466,13 +468,25 @@ class Controleur_visiteur
                                                 "facteur" => $facteurId,
                                                 "login" => $utilisateur["login"],
                                             ];
-                                            $this->vue->addToCorps(new Vue_Connexion_Second_Facteur($utilisateur["login"]));
+                                            $messageFA = "<p>Un code a usage unique vient d'etre envoye a l'adresse <strong>{".$utilisateur["login"]."}</strong>. Entrez-le ci-dessous pour finaliser votre connexion.</p>";
+
+   
+                                            $this->vue->addToCorps(new Vue_Connexion_Second_Facteur( $messageFA));
                                         }
                                     }
                                     break;
                                 case 2:// Application d'authentification (non implémenté)
-                                    $this->vue->addToCorps(new Vue_Connexion_Formulaire_client("L'authentification via application n'est pas encore implémentée."));
-                                    break;
+                                     $_SESSION["2fa_pending"] = [
+                                                "idUtilisateur" => (int) $utilisateur["idUtilisateur"],
+                                                "idCategorie_utilisateur" => (int) $utilisateur["idCategorie_utilisateur"],
+                                                "facteur" => $facteurId,
+                                                "login" => $utilisateur["login"],
+                                            ];
+                                             $messageFA = "<p>Veuillez vous connecter à votre application d'authentification et saisir le code à 6 chiffres proposé</p>";
+
+   
+                                            $this->vue->addToCorps(new Vue_Connexion_Second_Facteur( $messageFA));
+                                     break;
                                 default:
                                     $this->vue->addToCorps(new Vue_Connexion_Formulaire_client("Type de deuxieme facteur inconnu."));
                                     break;
@@ -543,6 +557,7 @@ class Controleur_visiteur
         }
 
         //On vérifie la validité du code
+        //Pour une raison surprenante, le code lié au FA ne serait plus en BDD
         $enregistrement = Modele_FacteurAuthentification::Avoir2FA_SelectParUtilisateur((int) $attente["idUtilisateur"]);
         if ($enregistrement === null || (int) $enregistrement["idFacteurAuthentification"] !== (int) $attente["facteur"]) {
             unset($_SESSION["2fa_pending"]);
@@ -551,18 +566,54 @@ class Controleur_visiteur
             return $response;
         }
 
-        //On vérifie si le code est le bon
-        if ($codeSaisi !== (string) ($enregistrement["valeur"] ?? "")) {
-            $ip = $_SERVER['REMOTE_ADDR'] ?? null;
-            $ua = $_SERVER['HTTP_USER_AGENT'] ?? null;
-            Modele_HistoriqueConnexion::HistoriqueConnexion_EnregistrerTentative($attente["login"] ?? "", false, (int) $attente["idUtilisateur"], $ip, $ua);
-            $this->vue->addToCorps(new Vue_Connexion_Second_Facteur($attente["login"] ?? "", "Code incorrect. Merci de reessayer."));
-            $response->getBody()->write($this->vue->donneStr());
-            return $response;
+        switch($_SESSION["2fa_pending"]["facteur"]) {
+            case 1: // Mail
+                 //On vérifie si le code est le bon
+                if ($codeSaisi !== (string) ($enregistrement["valeur"] ?? "")) {
+                    //Génération du log d'échec
+                    $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+                    $ua = $_SERVER['HTTP_USER_AGENT'] ?? null;
+                    Modele_HistoriqueConnexion::HistoriqueConnexion_EnregistrerTentative($attente["login"] ?? "", false, (int) $attente["idUtilisateur"], $ip, $ua);
+                    $this->vue->addToCorps(new Vue_Connexion_Second_Facteur($attente["login"] ?? "", "Code incorrect. Merci de reessayer."));
+                    $response->getBody()->write($this->vue->donneStr());
+                    return $response;
+                }
+
+                //Code correct, on enleve la valeur pour éviter une réutilisation
+                Modele_FacteurAuthentification::Avoir2FA_MettreAJourValeur((int) $attente["idUtilisateur"], '');
+                break;
+            case 2: // Application d'authentification
+                $otpEnvoyé = $codeSaisi; 
+                $secret = trim($enregistrement["valeur"]); 
+
+                date_default_timezone_set('Europe/Paris');
+                $totp = TOTP::create(
+                    $secret,
+                    30,           // période (30s)
+                    'sha1',       // algorithme (Google Authenticator = SHA1)
+                    6             // nombre de chiffres
+                );
+                $totp->setIssuer("Cafe.local");
+
+                if (!$totp->verify($codeSaisi,null,29)) {
+                    //Génération du log d'échec
+                    $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+                    $ua = $_SERVER['HTTP_USER_AGENT'] ?? null;
+                    Modele_HistoriqueConnexion::HistoriqueConnexion_EnregistrerTentative($attente["login"] ?? "", false, (int) $attente["idUtilisateur"], $ip, $ua);
+
+                    $this->vue->addToCorps(new Vue_Connexion_Second_Facteur($attente["login"] ?? "", "Code incorrect. Merci de reessayer.".$totp->now()." heure :".date('H:i:s'). "  ".$secret." ".date_default_timezone_get()." ".date('Y-m-d H:i:s') ));
+                    $response->getBody()->write($this->vue->donneStr());
+                    return $response;
+                }
+                break;
+            default:
+                unset($_SESSION["2fa_pending"]);
+                $this->vue->addToCorps(new Vue_Connexion_Formulaire_client("Type de deuxieme facteur inconnu. Veuillez recommencer la connexion."));
+                $response->getBody()->write($this->vue->donneStr());
+                return $response;
         }
 
-        //Code correct, on finalise la connexion
-        Modele_FacteurAuthentification::Avoir2FA_MettreAJourValeur((int) $attente["idUtilisateur"], '');
+        //On est arrivé, là donc tout est bon !!!
         $utilisateur = Modele_Utilisateur::Utilisateur_Select_ParId((int) $attente["idUtilisateur"]);
         unset($_SESSION["2fa_pending"]);
 

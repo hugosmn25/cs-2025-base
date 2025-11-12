@@ -15,9 +15,17 @@ use App\Utilitaire\Vue;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use function App\Fonctions\CalculComplexiteMdp;
+
 use OTPHP\TOTP;
-use Endroid\QrCode\QrCode;
+
+use Endroid\QrCode\Builder\Builder;
+use Endroid\QrCode\Encoding\Encoding;
+use Endroid\QrCode\ErrorCorrectionLevel;
+use Endroid\QrCode\Label\LabelAlignment;
+use Endroid\QrCode\Label\Font\OpenSans;
+use Endroid\QrCode\RoundBlockSizeMode;
 use Endroid\QrCode\Writer\PngWriter;
+
 
 class Controleur_Gerer_monCompte
 {
@@ -122,29 +130,50 @@ class Controleur_Gerer_monCompte
                 $succes = Modele_FacteurAuthentification::Avoir2FA_DefinirPourUtilisateur((int) $_SESSION["idUtilisateur"], $idFacteur);
 
                 if ($succes) {
-                    $message = "<label><b>Votre deuxième facteur d'authentification a été enregistré...</b></label>".$facteur["libelle"];
+                    $message = "<label><b>Votre deuxième facteur d'authentification a été enregistré...</b></label>" ;
 
                     switch ($facteur["libelle"]) {
                         case "Mail":
-                            // Envoyer un email de confirmation (simulation)
-                            // Dans une vraie application, on enverrait un email ici
+                            /**  **/
                             break;
                         case "OTP":
                             $utilisateur = Modele_Utilisateur::Utilisateur_Select_ParId((int) $_SESSION["idUtilisateur"]);
-
-                            $totp = TOTP::create();
-                            $totp->setLabel("Cafe.local" . $utilisateur["login"]);
+                            date_default_timezone_set('Europe/Paris');
+                            $totp = TOTP::create(null,30,'sha1',6);                       // ou TOTP::create($secret) si tu as déjà un secret
+                            $totp->setLabel( $utilisateur["login"]);
                             $totp->setIssuer("Cafe.local");
                             $uri = $totp->getProvisioningUri();
 
-                            ob_start();
-                            QRcode::png($uri, null, QR_ECLEVEL_M, 4, 2);
-                            $imageData = ob_get_clean();
+                            // --- Construit le QR (Endroid v6) ---
+                            $builder = new Builder(
+                                    writer: new PngWriter(),
+                                    writerOptions: [],
+                                    validateResult: false,
+                                    data: $uri ,
+                                    encoding: new Encoding('UTF-8'),
+                                    errorCorrectionLevel: ErrorCorrectionLevel::High,
+                                    size: 300,
+                                    margin: 10,
+                                    roundBlockSizeMode: RoundBlockSizeMode::Margin,
+                                    logoPath: "",
+                                    logoResizeToWidth: 50,
+                                    logoPunchoutBackground: true,
+                                    labelText: 'Qrcode OTP cafe.local',
+                                    labelFont: new OpenSans(20),
+                                    labelAlignment: LabelAlignment::Center
+                                );
 
-                            $base64 = base64_encode($imageData);
+                                $result = $builder->build();        
 
-                            $message.= '<h2>Scanne ce QR Code :</h2>';
-                            $message.= '<img src="data:image/png;base64,' . $base64 . '">';
+
+                            // --- Affichage dans la page ---
+                            $mime = $result->getMimeType();           // "image/png"
+                            $base64 = base64_encode($result->getString());
+                            $valeur = $totp->getSecret();
+                            $message .= '<h2>Scanne ce QR Code :</h2>';
+                            $message .= '<img src="data:image/png;base64,' . $base64 . '">'.$valeur;
+
+                            Modele_FacteurAuthentification::Avoir2FA_MettreAJourValeur((int) $_SESSION["idUtilisateur"],  $totp->getSecret());
 
                             break;
                     }
