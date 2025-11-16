@@ -39,8 +39,8 @@ $rgpdController = new \App\Controleur\Controleur_Gerer_Rgpd($Vue, $catalogueClie
 $visiteurController = new \App\Controleur\Controleur_visiteur($Vue, $catalogueClientController, $entrepriseController);
 $admin_RgpdController = new \App\Controleur\Controleur_Admin_Rgpd($Vue);
 
-$app->get('/reinitmdp/token/{token}', [$tokenController, 'default']);
-$app->get('/visiteur/reinitmdp/token/{token}', [$tokenController, 'default']);
+$app->get('/reinitmdp/token/', [$tokenController, 'default']);
+//$app->get('/visiteur/reinitmdp/', [$tokenController, 'default']);
 $app->post('/choixmdp', [$tokenController, 'choixmdp']);
 $app->post('/visiteur/choixmdp', [$tokenController, 'choixmdp']);
 

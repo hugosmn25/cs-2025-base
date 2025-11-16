@@ -5,6 +5,7 @@ namespace App\Controleur;
 use App\Modele\Modele_Utilisateur;
 use App\Modele\Modele_Token;
 use App\Vue\Vue_AfficherMessage;
+use App\Vue\Vue_Connexion_Formulaire_client;
 use App\Vue\Vue_Mail_ChoisirNouveauMdp;
 use App\Vue\Vue_Structure_Entete;
 use App\Utilitaire\Vue;
@@ -83,6 +84,7 @@ class Controleur_Gerer_Token
         Modele_Token::Token_SupprimerParUtilisateur((int) $tokenBDD["idUtilisateur"], 1);
 
         $this->vue->addToCorps(new Vue_AfficherMessage("<label><b>Votre mot de passe a été mis à jour. Vous pouvez désormais vous connecter avec votre nouveau mot de passe.</b></label>"));
+        $this->vue->addToCorps(new Vue_Connexion_Formulaire_client());
         $response->getBody()->write($this->vue->donneStr());
         return $response;
     }

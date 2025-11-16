@@ -21,7 +21,13 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
 use function App\Fonctions\CalculComplexiteMdp;
 use OTPHP\TOTP;
-use Endroid\QrCode\QrCode;
+
+use Endroid\QrCode\Builder\Builder;
+use Endroid\QrCode\Encoding\Encoding;
+use Endroid\QrCode\ErrorCorrectionLevel;
+use Endroid\QrCode\Label\LabelAlignment;
+use Endroid\QrCode\Label\Font\OpenSans;
+use Endroid\QrCode\RoundBlockSizeMode;
 use Endroid\QrCode\Writer\PngWriter;
 
 class Controleur_Gerer_Entreprise
@@ -250,22 +256,44 @@ class Controleur_Gerer_Entreprise
                         break;
                     case "OTP":
                         $utilisateur = Modele_Utilisateur::Utilisateur_Select_ParId((int) $_SESSION["idUtilisateur"]);
+                            date_default_timezone_set('Europe/Paris');
+                            $totp = TOTP::create(null,30,'sha1',6);                       // ou TOTP::create($secret) si tu as déjà un secret
+                            $totp->setLabel( $utilisateur["login"]);
+                            $totp->setIssuer("Cafe.local");
+                            $uri = $totp->getProvisioningUri();
 
-                        $totp = TOTP::create();
-                        $totp->setLabel("Cafe.local:" . $utilisateur["login"]);
-                        $totp->setIssuer("Cafe.local");
-                        $uri = $totp->getProvisioningUri();
+                            // --- Construit le QR (Endroid v6) ---
+                            $builder = new Builder(
+                                    writer: new PngWriter(),
+                                    writerOptions: [],
+                                    validateResult: false,
+                                    data: $uri ,
+                                    encoding: new Encoding('UTF-8'),
+                                    errorCorrectionLevel: ErrorCorrectionLevel::High,
+                                    size: 300,
+                                    margin: 10,
+                                    roundBlockSizeMode: RoundBlockSizeMode::Margin,
+                                    logoPath: "",
+                                    logoResizeToWidth: 50,
+                                    logoPunchoutBackground: true,
+                                    labelText: 'Qrcode OTP cafe.local',
+                                    labelFont: new OpenSans(20),
+                                    labelAlignment: LabelAlignment::Center
+                                );
 
-                        ob_start();
-                        QRcode::png($uri, null, QR_ECLEVEL_M, 4, 2);
-                        $imageData = ob_get_clean();
+                                $result = $builder->build();        
 
-                        $base64 = base64_encode($imageData);
 
-                        echo '<h2>Scanne ce QR Code :</h2>';
-                        echo '<img src="data:image/png;base64,' . $base64 . '">';
+                            // --- Affichage dans la page ---
+                            $mime = $result->getMimeType();           // "image/png"
+                            $base64 = base64_encode($result->getString());
+                             
+                            $message .= '<h2>Scanne ce QR Code :</h2>';
+                            $message .= '<img src="data:image/png;base64,' . $base64 . '">';
 
-                        break;
+                            Modele_FacteurAuthentification::Avoir2FA_MettreAJourValeur((int) $_SESSION["idUtilisateur"],  $totp->getSecret());
+
+                            break;
                     // Ajouter d'autres cas pour d'autres types de facteurs si nécessaire
                 }
 

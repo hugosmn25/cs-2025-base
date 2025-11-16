@@ -169,10 +169,9 @@ class Controleur_Gerer_monCompte
                             // --- Affichage dans la page ---
                             $mime = $result->getMimeType();           // "image/png"
                             $base64 = base64_encode($result->getString());
-                            $valeur = $totp->getSecret();
+                             
                             $message .= '<h2>Scanne ce QR Code :</h2>';
-                            $message .= '<img src="data:image/png;base64,' . $base64 . '">'.$valeur;
-
+                            $message .= '<img src="data:image/png;base64,' . $base64 . '">';
                             Modele_FacteurAuthentification::Avoir2FA_MettreAJourValeur((int) $_SESSION["idUtilisateur"],  $totp->getSecret());
 
                             break;

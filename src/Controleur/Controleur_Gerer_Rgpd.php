@@ -135,6 +135,7 @@ class Controleur_Gerer_Rgpd
                     }
                     $_SESSION["idCategorie_utilisateur"] = $utilisateur["idCategorie_utilisateur"];
                     switch ($utilisateur["idCategorie_utilisateur"]) {
+                        case 5:
                         case 1:
                         case 2:
                             $this->vue->setMenu(new Vue_Menu_Administration($_SESSION["idCategorie_utilisateur"]));

@@ -246,7 +246,7 @@ class Controleur_visiteur
         if ($basePath === '/' || $basePath === '\\' || $basePath === '.') {
             $basePath = '';
         }
-        $url = $scheme . '://' . $host . $basePath . '/reinitmdp/token/' . rawurlencode($tokenValeur);
+        $url = $scheme . '://' . $host . $basePath . '/reinitmdp/token/?token=' . rawurlencode($tokenValeur);
 
         $expirationTexte = $expiration->format('d/m/Y H:i');
         $messageLien = "Vous avez demandé la réinitialisation de votre mot de passe.<br>"
@@ -600,8 +600,10 @@ class Controleur_visiteur
                     $ip = $_SERVER['REMOTE_ADDR'] ?? null;
                     $ua = $_SERVER['HTTP_USER_AGENT'] ?? null;
                     Modele_HistoriqueConnexion::HistoriqueConnexion_EnregistrerTentative($attente["login"] ?? "", false, (int) $attente["idUtilisateur"], $ip, $ua);
+                    $phraseMsg = "Code incorrect. Merci de reessayer.<br>
+                    Voici des infos de débuggages : <br>".$totp->now()." heure :".date('H:i:s'). " ".date_default_timezone_get()." ".date('Y-m-d H:i:s');
 
-                    $this->vue->addToCorps(new Vue_Connexion_Second_Facteur($attente["login"] ?? "", "Code incorrect. Merci de reessayer.".$totp->now()." heure :".date('H:i:s'). "  ".$secret." ".date_default_timezone_get()." ".date('Y-m-d H:i:s') ));
+                    $this->vue->addToCorps(new Vue_Connexion_Second_Facteur($attente["login"] ?? "", $phraseMsg ));
                     $response->getBody()->write($this->vue->donneStr());
                     return $response;
                 }
