@@ -603,7 +603,7 @@ class Controleur_visiteur
                     $phraseMsg = "Code incorrect. Merci de reessayer.<br>
                     Voici des infos de débuggages : <br>".$totp->now()." heure :".date('H:i:s'). " ".date_default_timezone_get()." ".date('Y-m-d H:i:s');
 
-                    $this->vue->addToCorps(new Vue_Connexion_Second_Facteur($attente["login"] ?? "", $phraseMsg ));
+                    $this->vue->addToCorps(new Vue_Connexion_Second_Facteur($attente["login"] . $phraseMsg ));
                     $response->getBody()->write($this->vue->donneStr());
                     return $response;
                 }
