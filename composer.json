@@ -18,7 +18,8 @@
     "slim/slim": "*",
     "slim/psr7": "^1.7",
     "spomky-labs/otphp" : "*",
-    "endroid/qr-code": "*"
+    "endroid/qr-code": "*",
+    "monolog/monolog": "^3.9"
   },
   "autoload": {
     "files": [

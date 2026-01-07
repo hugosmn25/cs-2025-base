@@ -2,6 +2,7 @@
 //error_log("page debut");
 session_start();
 include_once "../vendor/autoload.php";
+include_once "../src/Fonctions/CSRF.php";
 
 use Slim\Factory\AppFactory;
 use App\Utilitaire\Vue;
@@ -12,18 +13,126 @@ use App\Vue\Vue_Structure_Entete;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
 
+// Logs (syslog / RFC5424 via syslog collector)
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
+use Monolog\Handler\SyslogUdpHandler;
+use Monolog\Formatter\LineFormatter;
 
-//Page appelée pour les utilisateurs publics
+// Page appelée pour les utilisateurs publics
+genereCSRF();
 
+/**
+ * Helpers logs
+ */
+function get_client_ip(): string
+{
+    return $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+}
+
+function get_request_id(): string
+{
+    if (!empty($_SERVER['HTTP_X_REQUEST_ID'])) {
+        return (string) $_SERVER['HTTP_X_REQUEST_ID'];
+    }
+    return bin2hex(random_bytes(16));
+}
+
+function log_ctx(array $extra = []): array
+{
+    return array_merge([
+        'req_id'  => $GLOBALS['req_id'] ?? null,
+        'ip'      => get_client_ip(),
+        'method'  => $_SERVER['REQUEST_METHOD'] ?? null,
+        'uri'     => $_SERVER['REQUEST_URI'] ?? null,
+        'ua'      => $_SERVER['HTTP_USER_AGENT'] ?? null,
+        'user_id' => $_SESSION['idUtilisateur'] ?? null,
+        'role'    => $_SESSION['idCategorie_utilisateur'] ?? 0,
+    ], $extra);
+}
+
+$logger = new Logger('cafe-app');
+
+$formatter = new LineFormatter(
+    "%message% %context%\n",
+    "Y-m-d\TH:i:s.uP",
+    true,
+    true
+);
+
+$useSyslog = extension_loaded('sockets'); // <— clé de la correction
+
+if ($useSyslog) {
+    $syslogHost = '127.0.0.1';
+    $syslogPort = 514;
+
+    $handler = new SyslogUdpHandler($syslogHost, $syslogPort, LOG_USER, Logger::INFO);
+    $handler->setFormatter($formatter);
+    $logger->pushHandler($handler);
+} else {
+    // Fallback fichier (Windows)
+    $logDir = realpath(__DIR__ . '/..') . DIRECTORY_SEPARATOR . 'logs';
+    if (!is_dir($logDir)) {
+        mkdir($logDir, 0750, true);
+    }
+
+    $fileHandler = new StreamHandler($logDir . DIRECTORY_SEPARATOR . 'app.log', Logger::INFO);
+    $fileHandler->setFormatter($formatter);
+    $logger->pushHandler($fileHandler);
+
+    $logger->warning('logger.syslog_disabled', [
+        'reason' => 'php extension sockets missing',
+        'php_ini' => php_ini_loaded_file()
+    ]);
+}
+
+$GLOBALS['logger'] = $logger;
+$GLOBALS['req_id'] = get_request_id();
 
 $Vue = new Vue();
 $Vue->setEntete(new Vue_Structure_Entete());
-//Charge le gestionnaire de vue
+// Charge le gestionnaire de vue
 
 // Création de l'application Slim
 $app = AppFactory::create();
 
-//chargement des différents controleurs
+/**
+ * Middleware global:
+ * - request.start
+ * - request.end (status + duration)
+ * - unhandled.exception
+ */
+$app->add(function (Request $request, $handler) use ($logger) {
+    $start = microtime(true);
+
+    $logger->info('request.start', log_ctx([
+        'route' => (string) $request->getUri()->getPath(),
+    ]));
+
+    try {
+        $response = $handler->handle($request);
+    } catch (\Throwable $e) {
+        $logger->error('unhandled.exception', log_ctx([
+            'route'     => (string) $request->getUri()->getPath(),
+            'exception' => get_class($e),
+            'message'   => $e->getMessage(),
+            'file'      => $e->getFile(),
+            'line'      => $e->getLine(),
+        ]));
+        throw $e;
+    }
+
+    $durationMs = (int) round((microtime(true) - $start) * 1000);
+    $logger->info('request.end', log_ctx([
+        'route'       => (string) $request->getUri()->getPath(),
+        'status_code' => $response->getStatusCode(),
+        'duration_ms' => $durationMs,
+    ]));
+
+    return $response;
+});
+
+// chargement des différents controleurs
 $catalogueBackController = new \App\Controleur\Controleur_Gerer_catalogue($Vue);
 $catalogueClientController = new \App\Controleur\Controleur_Catalogue_client($Vue);
 $commandeBackController = new \App\Controleur\Controleur_Gerer_Commande($Vue);
@@ -44,13 +153,12 @@ $app->get('/reinitmdp/token/', [$tokenController, 'default']);
 $app->post('/choixmdp', [$tokenController, 'choixmdp']);
 $app->post('/visiteur/choixmdp', [$tokenController, 'choixmdp']);
 
-//Pour éviter d'être bloqué à cause des sesssions, si l'utilisateur retourne à l'URL de connexion, il est déconnecté
+// Pour éviter d'être bloqué à cause des sesssions, si l'utilisateur retourne à l'URL de connexion, il est déconnecté
 if (isset($_SESSION["idCategorie_utilisateur"])) {
     $typeConnexion = $_SESSION["idCategorie_utilisateur"];
 } else {
     $typeConnexion = 0;
 }
-
 
 switch ((int) $typeConnexion) {
     case 0:
@@ -106,10 +214,10 @@ switch ((int) $typeConnexion) {
         $app->get('/Gerer_utilisateur/ModifierUtilisateur/{id}', [$utilisateurController, 'ModifierUtilisateur']);
         $app->post('/Gerer_utilisateur/mettreAJourUtilisateur/{id}', [$utilisateurController, 'mettreAJourUtilisateur']);
         $app->get('/Gerer_utilisateur/DesactiverUtilisateur/{id}', [$utilisateurController, 'DesactiverUtilisateur']);
-        $app->get('/Gerer_utilisateur/ActiverUtilisateur/{id}', [$utilisateurController, 'ActiverUtilisateur']); // (Optionnel) si tu veux aussi exposer la réinit MDP par route: // 
+        $app->get('/Gerer_utilisateur/ActiverUtilisateur/{id}', [$utilisateurController, 'ActiverUtilisateur']); // (Optionnel) si tu veux aussi exposer la réinit MDP par route: //
         $app->post('/Gerer_utilisateur/reinitialiserMDPUtilisateur/{id}', [$utilisateurController, 'reinitialiserMDPUtilisateur']);
         $app->get('/Gerer_catalogue', [$catalogueBackController, 'default']);
-        $app->get('/Gerer_catalogue/boutonCategorie/{idCategorie}', [$catalogueBackController, 'boutonCategorie']);
+        $app->get('/Gerer_catalogue/boutonCategorie/{uuid}', [$catalogueBackController, 'boutonCategorie']);
         $app->get('/Gerer_catalogue/nouveauProduit/{idCategorie}', [$catalogueBackController, 'nouveauProduit']);
         $app->post('/Gerer_catalogue/CreationProduit', [$catalogueBackController, 'CreationProduit']);
         $app->post('/Gerer_catalogue/CategorieAvecProduit', [$catalogueBackController, 'CategorieAvecProduit']);
@@ -137,8 +245,8 @@ switch ((int) $typeConnexion) {
         $app->get('/SeConnecter', [$visiteurController, 'SeConnecter']);
         $app->post('/visiteur/submitModifMDPForce', [$visiteurController, 'submitModifMDPForce']);
 
-
         break;
+
     case 6:
         $app->get('/', [$admin_RgpdController, 'default']);
         $app->get('/Gerer_Rgpd', [$rgpdController, 'validerRGPD']);
@@ -170,6 +278,7 @@ switch ((int) $typeConnexion) {
         $app->get('/SeConnecter', [$visiteurController, 'SeConnecter']);
 
         break;
+
     case 3:
     case 4:
 
@@ -223,11 +332,16 @@ switch ((int) $typeConnexion) {
         $app->get('/SeConnecter', [$visiteurController, 'SeConnecter']);
         $app->get('/', [$visiteurController, 'default']);
 
-
     default:
 }
+
+// Fallback 404: à garder juste avant run()
+$app->map(['GET','POST','PUT','DELETE','PATCH'], '/{routes:.+}', function (Request $request, Response $response) {
+    $GLOBALS['logger']->warning('route.not_found', log_ctx([
+        'route' => (string) $request->getUri()->getPath()
+    ]));
+    $response->getBody()->write("404");
+    return $response->withStatus(404);
+});
+
 $app->run();
-
-
-
-
